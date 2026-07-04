@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BMC Ops Board — Housekeeping & Bed Making</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --teal-900:#0B2E2F; --teal-800:#0F3D3E; --teal-600:#1B6B6F; --teal-100:#DCEAE9;
+  --bg:#EEF3F1; --card:#FFFFFF; --ink:#16241F; --ink-soft:#5B6D68; --line:#DCE5E1;
+  --amber:#E3A008; --amber-bg:#FDF2DC; --green:#2F9E63; --green-bg:#E3F5EB;
+  --red:#D9534F; --red-bg:#FBE7E6; --blue:#2E6FA7; --blue-bg:#E6EFF7;
+  --purple:#7A5CC7; --purple-bg:#EEE9FA; --gold:#C8951E; --gold-bg:#FBF1DC;
+  --orange:#F2994A; --orange-bg:#FDEBDA; --black-flag:#1A1A1A;
+  --radius:14px; --disp:'Space Grotesk',sans-serif; --body:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; font-family:var(--body); background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+#app{max-width:520px; margin:0 auto; min-height:100vh; background:var(--bg); position:relative; padding-bottom:36px;}
+
+/* ---------- 3D BUTTON SYSTEM ---------- */
+button{ box-shadow:0 4px 0 rgba(0,0,0,.22), 0 6px 10px rgba(0,0,0,.10); transition:transform .07s ease, box-shadow .07s ease; transform:translateY(0); }
+button:active{ transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.22), 0 1px 2px rgba(0,0,0,.10); }
+button:disabled{ box-shadow:0 2px 0 rgba(0,0,0,.12); }
+button.flat{ box-shadow:none !important; transform:none !important; }
+
+.topbar{position:sticky; top:0; z-index:40; background:var(--teal-800); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 10px rgba(11,46,47,.18);}
+.topbar .back{width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.14); border:none; color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.topbar .titles{flex:1; min-width:0;}
+.topbar h1{font-family:var(--disp); font-size:18px; margin:0; font-weight:700; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.topbar .sub{font-size:13px; color:var(--teal-100); margin-top:1px; font-family:var(--mono); text-transform:uppercase; letter-spacing:.6px;}
+.topbar .who{font-size:13px; background:rgba(255,255,255,.16); padding:6px 10px; border-radius:8px; font-family:var(--mono); white-space:nowrap; border:none; color:#fff;}
+
+.screen{padding:16px;}
+.hidden{display:none !important;}
+
+.login-wrap{min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:28px 22px; background:radial-gradient(circle at 20% 0%, #124C4D 0%, var(--teal-900) 60%);}
+.login-brand{color:#fff; margin-bottom:22px;}
+.login-brand .tag{font-family:var(--mono); font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#7FC3C0; margin-bottom:8px;}
+.login-brand h1{font-family:var(--disp); font-size:29px; margin:0 0 6px; line-height:1.15;}
+.login-brand p{margin:0; color:#B9D6D3; font-size:15px; line-height:1.5;}
+.login-card{background:#fff; border-radius:18px; padding:20px; box-shadow:0 20px 40px rgba(0,0,0,.25); max-height:76vh; overflow-y:auto;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:14px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px;}
+.field input, .field select, .field textarea{width:100%; padding:12px 13px; border-radius:10px; border:1.5px solid var(--line); font-size:17px; background:#fbfcfb; box-shadow:none;}
+.field input:focus, .field textarea:focus{outline:none; border-color:var(--teal-600);}
+.pick2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.pick3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;}
+.pick3 .pick-btn{padding:14px 4px; font-size:13.5px;}
+.pick3 .pick-btn .ic{font-size:20px; margin-bottom:4px;}
+.pick-btn .np-sub{display:block; font-size:12px; font-weight:600; opacity:.7; margin-top:1px;}
+.name-crud-row button .np-sub{display:block; font-size:11px; font-weight:600; opacity:.85; margin-top:1px;}
+.primary-btn .np-sub{display:block; font-size:13.5px; font-weight:600; opacity:.8; margin-top:2px;}
+.pick-btn{padding:14px 8px; border-radius:12px; border:1.5px solid var(--line); background:#fbfcfb; text-align:center; font-weight:600; font-size:15px; color:var(--ink-soft);}
+.pick-btn.active{border-color:var(--teal-600); background:var(--teal-100); color:var(--teal-800);}
+.pick-btn .ic{font-size:22px; display:block; margin-bottom:5px;}
+.primary-btn{width:100%; padding:14px; border-radius:11px; border:none; background:var(--teal-800); color:#fff; font-weight:700; font-size:17px; letter-spacing:.2px; box-shadow:0 4px 0 rgba(11,46,47,.4);}
+.err-text{color:var(--red); font-size:14px; margin:-8px 0 12px; display:none;}
+.name-picker{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; min-height:20px;}
+.name-chip{padding:9px 14px; border-radius:20px; border:1.5px solid var(--line); background:#fbfcfb; font-size:15px; font-weight:600; color:var(--ink-soft);}
+.name-chip.active{border-color:var(--teal-600); background:var(--teal-100); color:var(--teal-800);}
+.name-empty{font-size:14px; color:var(--ink-soft); padding:6px 2px;}
+.name-crud-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:4px;}
+.name-crud-row button{padding:11px 4px; border-radius:10px; border:none; color:#fff; font-weight:700; font-size:14px;}
+.crud-add{background:var(--teal-600); box-shadow:0 4px 0 #124f52;}
+.crud-update{background:var(--blue); box-shadow:0 4px 0 #204f78;}
+.crud-delete{background:var(--red); box-shadow:0 4px 0 #a43c39;}
+
+.stat-strip{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:8px;}
+.stat{background:var(--card); border-radius:12px; padding:12px 10px; text-align:center; border:1px solid var(--line); box-shadow:0 2px 0 rgba(0,0,0,.05);}
+.stat .n{font-family:var(--disp); font-size:22px; font-weight:700; color:var(--teal-800);}
+.stat .l{font-size:11.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px; margin-top:2px; font-family:var(--mono);}
+.stat.amber .n{color:var(--amber);} .stat.red .n{color:var(--red);}
+
+.section-label{font-family:var(--mono); font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); margin:18px 0 8px; display:flex; align-items:center; gap:8px;}
+.section-label::after{content:''; flex:1; height:1px; background:var(--line);}
+
+.bldg-card{background:var(--card); border-radius:var(--radius); border:1px solid var(--line); margin-bottom:12px; overflow:hidden; display:flex; align-items:stretch; box-shadow:0 3px 0 rgba(15,61,62,.08);}
+.bldg-card .bar{width:6px; flex-shrink:0;}
+.bldg-card .body{flex:1; padding:14px 15px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; box-shadow:none; background:none; border:none; text-align:left; font-family:inherit; color:inherit;}
+.bldg-card .name{font-family:var(--disp); font-weight:700; font-size:18px; color:var(--teal-900);}
+.bldg-card .meta{font-size:13px; color:var(--ink-soft); margin-top:3px; line-height:1.5;}
+.bldg-card .chev{color:var(--ink-soft); font-size:20px; margin-left:4px;}
+
+.action-tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+.tile{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 14px; text-align:left; box-shadow:0 4px 0 rgba(15,61,62,.10);}
+.tile .ic{font-size:24px; margin-bottom:8px; display:block;}
+.wt-icon svg{display:inline-block; vertical-align:-4px;}
+.tile .t{font-family:var(--disp); font-weight:700; font-size:16px; color:var(--teal-900);}
+.tile .t .np-sub{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:1px;}
+.notepad-btn .t .np-sub{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:1px;}
+.tile .d{font-size:13px; color:var(--ink-soft); margin-top:3px;}
+.notepad-btn{width:100%; padding:15px; border-radius:var(--radius); border:1px solid var(--line); background:var(--card); box-shadow:0 4px 0 rgba(15,61,62,.10); display:flex; align-items:center; gap:10px; text-align:left; margin-bottom:6px;}
+.notepad-btn .ic{font-size:22px;}
+.notepad-btn .t{font-family:var(--disp); font-weight:700; font-size:16px; color:var(--teal-900);}
+.notepad-btn .d{font-size:13px; color:var(--ink-soft); margin-top:1px;}
+
+.legend-strip{display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; margin-bottom:12px;}
+.legend-chip{flex-shrink:0; display:flex; align-items:center; gap:5px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:5px 10px 5px 6px; font-size:12.5px; font-weight:600; color:var(--ink-soft); box-shadow:none;}
+.legend-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+
+.list-item{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 15px; margin-bottom:9px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; box-shadow:0 3px 0 rgba(15,61,62,.06); width:100%; text-align:left; font-family:inherit; color:inherit;}
+.list-item .li-main{flex:1;}
+.list-item .li-title{font-weight:700; font-size:16.5px; color:var(--teal-900); font-family:var(--disp);}
+.list-item .li-sub{font-size:13.5px; color:var(--ink-soft); margin-top:2px;}
+.list-item .li-badge{font-family:var(--mono); font-size:12.5px; font-weight:600; padding:4px 8px; border-radius:7px; white-space:nowrap;}
+.badge-done{background:var(--green-bg); color:var(--green);}
+.badge-pending{background:var(--amber-bg); color:var(--amber);}
+.badge-none{background:var(--line); color:var(--ink-soft);}
+
+.room-card{background:var(--card); border-radius:12px; border:1px solid var(--line); margin-bottom:10px; overflow:hidden; box-shadow:0 3px 0 rgba(15,61,62,.06);}
+.room-card .rc-top{display:flex; align-items:stretch; gap:10px; padding:12px 14px; cursor:pointer; width:100%; background:none; border:none; box-shadow:none; text-align:left; font-family:inherit; color:inherit;}
+.room-card .rc-bar{width:5px; align-self:stretch; border-radius:3px; flex-shrink:0; background:var(--line);}
+.room-card .rc-num{font-family:var(--disp); font-weight:700; font-size:17px; color:var(--teal-900); display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+.room-card .rc-info{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+.room-card .rc-badges{display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex-shrink:0;}
+.rc-pill{font-family:var(--mono); font-size:11.5px; font-weight:700; padding:4px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap;}
+.mini-tag{font-size:11px; font-weight:700; padding:2px 6px; border-radius:5px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap;}
+.room-card .rc-linen{font-size:12.5px; color:var(--ink-soft); padding:0 14px 12px; font-family:var(--mono);}
+
+.st-pending{background:var(--amber-bg); color:var(--amber);}
+.st-progress{background:var(--blue-bg); color:var(--blue);}
+.st-done{background:var(--green-bg); color:var(--green);}
+.st-na{background:var(--line); color:var(--ink-soft);}
+
+.add-room-btn{width:100%; padding:13px; border-radius:12px; border:1.5px dashed var(--teal-600); background:var(--teal-100); color:var(--teal-800); font-weight:700; font-size:15.5px; margin-top:6px; margin-bottom:14px; box-shadow:0 4px 0 rgba(27,107,111,.15);}
+
+.modal-overlay{position:fixed; inset:0; background:rgba(11,46,47,.45); z-index:100; display:flex; align-items:flex-end;}
+.modal{background:#fff; width:100%; max-width:520px; margin:0 auto; border-radius:20px 20px 0 0; max-height:92vh; overflow-y:auto; padding-bottom:20px;}
+.modal-head{position:sticky; top:0; background:#fff; padding:16px 18px 10px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; z-index:5;}
+.modal-head h3{font-family:var(--disp); font-size:19px; margin:0; flex:1;}
+.modal-close{width:30px; height:30px; border-radius:8px; background:var(--bg); border:none; font-size:18px; color:var(--ink-soft);}
+.modal-body{padding:16px 18px;}
+
+.scope-card{border-radius:14px; border:1.5px solid var(--line); padding:14px; margin-bottom:16px;}
+.scope-card.locked{opacity:.5;}
+.scope-head{display:flex; align-items:center; gap:8px; margin-bottom:12px;}
+.scope-head .ic{font-size:19px;}
+.scope-head h4{font-family:var(--disp); font-size:16px; margin:0; color:var(--teal-900); flex:1;}
+.scope-head .lock-note{font-size:12px; color:var(--ink-soft); font-family:var(--mono);}
+
+.seg{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px;}
+.seg button{padding:11px 3px; border-radius:9px; border:1.5px solid var(--line); background:#fbfcfb; font-size:11.5px; font-weight:700; font-family:var(--mono); text-transform:uppercase; color:var(--ink-soft); box-shadow:0 3px 0 rgba(0,0,0,.08); line-height:1.3;}
+.seg button .np-sub{display:block; font-size:10px; font-weight:600; text-transform:none; opacity:.8; margin-top:2px; font-family:var(--body);}
+.seg button:disabled{opacity:.5;}
+.seg button.active-pending{background:var(--amber-bg); border-color:var(--amber); color:var(--amber);}
+.seg button.active-progress{background:var(--blue-bg); border-color:var(--blue); color:var(--blue);}
+.seg button.active-done{background:var(--green-bg); border-color:var(--green); color:var(--green);}
+.seg button.active-na{background:var(--line); border-color:var(--ink-soft); color:var(--ink-soft);}
+.seg button.active-sel{background:var(--teal-100); border-color:var(--teal-600); color:var(--teal-800);}
+.seg2{grid-template-columns:1fr 1fr;} .seg3{grid-template-columns:1fr 1fr 1fr;}
+
+.flag-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.flagbtn{display:flex; flex-direction:column; align-items:center; gap:4px; padding:11px 4px; border-radius:11px; border:1.5px solid var(--line); background:#fff;}
+.flagbtn .dot{width:18px; height:18px; border-radius:50%; border:2px solid rgba(0,0,0,.1);}
+.flagbtn .lb-en{font-size:11.5px; font-weight:700; color:var(--ink-soft); text-align:center; line-height:1.2;}
+.flagbtn .lb-np{font-size:11px; font-weight:600; color:var(--ink-soft); text-align:center; line-height:1.2; opacity:.85;}
+.flagbtn.selected{border-width:2px;}
+
+.linen-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+.linen-item label{display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:var(--ink-soft); margin-bottom:5px;}
+.li-head{display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px;}
+.li-name{font-size:13.5px; font-weight:600; color:var(--ink-soft); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.li-actions{display:flex; gap:4px; flex-shrink:0;}
+.li-icon-btn{width:22px; height:22px; border-radius:6px; border:1px solid var(--line); background:#fff; font-size:12.5px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 0 rgba(0,0,0,.08); padding:0;}
+.add-item-row{display:flex; gap:8px; margin-top:2px;}
+.add-item-row input{flex:1; padding:11px 12px; border-radius:10px; border:1.5px dashed var(--teal-600); background:var(--teal-100); font-size:15px;}
+.add-item-row button{padding:0 16px; border-radius:10px; border:none; background:var(--teal-800); color:#fff; font-weight:700; font-size:15px; white-space:nowrap; box-shadow:0 4px 0 rgba(11,46,47,.4);}
+.stepper{display:flex; align-items:center; gap:6px;}
+.stepper button{width:32px; height:38px; border-radius:8px; border:1px solid var(--line); background:var(--bg); font-size:18px; font-weight:700; color:var(--teal-800); flex-shrink:0; box-shadow:0 3px 0 rgba(0,0,0,.08);}
+.stepper button:disabled{opacity:.4;}
+.stepper input{flex:1; width:100%; padding:10px; border-radius:9px; border:1.5px solid var(--line); font-size:17px; text-align:center; font-family:var(--mono); font-weight:700; color:var(--teal-900);}
+.stepper input:disabled{background:var(--bg); color:var(--ink-soft);}
+
+.modal-actions{display:flex; gap:10px; margin-top:16px;}
+.btn-secondary{flex:1; padding:12px; border-radius:10px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); font-weight:700; font-size:15px; box-shadow:0 3px 0 rgba(0,0,0,.08);}
+.btn-danger{padding:12px 16px; border-radius:10px; border:1.5px solid var(--red); background:var(--red-bg); color:var(--red); font-weight:700; font-size:15px; box-shadow:0 3px 0 rgba(217,83,79,.2);}
+.btn-save{flex:2; padding:12px; border-radius:10px; border:none; background:var(--teal-800); color:#fff; font-weight:700; font-size:15.5px; box-shadow:0 4px 0 rgba(11,46,47,.4);}
+
+.report-box{background:var(--teal-900); color:#DCEAE9; font-family:var(--mono); font-size:13.5px; line-height:1.65; padding:16px; border-radius:12px; white-space:pre-wrap; margin-bottom:14px; max-height:50vh; overflow-y:auto; -webkit-user-select:text; user-select:text;}
+.wa-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; border-radius:11px; border:none; background:#25D366; color:#fff; font-weight:700; font-size:16.5px; margin-bottom:10px; box-shadow:0 4px 0 #1a9c4d;}
+.copy-btn{width:100%; padding:12px; border-radius:10px; border:1.5px solid var(--line); background:#fff; color:var(--teal-800); font-weight:700; font-size:15px; box-shadow:0 3px 0 rgba(0,0,0,.08);}
+.toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--teal-900); color:#fff; padding:10px 18px; border-radius:20px; font-size:15px; font-weight:600; z-index:200; box-shadow:0 8px 20px rgba(0,0,0,.25);}
+
+.empty-note{text-align:center; padding:30px 18px; color:var(--ink-soft); font-size:15px;}
+.empty-note .ic{font-size:32px; display:block; margin-bottom:8px;}
+
+.note-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 15px; margin-bottom:9px; box-shadow:0 3px 0 rgba(15,61,62,.06);}
+.ptt-wrap{display:flex; flex-direction:column; align-items:center; padding:28px 16px 22px;}
+.ptt-btn{width:150px; height:150px; border-radius:50%; border:none; background:var(--teal-800); color:#fff; box-shadow:0 8px 0 rgba(11,46,47,.4), 0 12px 24px rgba(11,46,47,.25); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; -webkit-user-select:none; user-select:none; touch-action:none;}
+.ptt-btn:active, .ptt-btn.recording{transform:translateY(5px); box-shadow:0 3px 0 rgba(11,46,47,.4);}
+.ptt-btn.recording{background:var(--red); animation:pttpulse 1s ease-in-out infinite;}
+@keyframes pttpulse{0%,100%{box-shadow:0 3px 0 rgba(217,83,79,.4), 0 0 0 0 rgba(217,83,79,.5);} 50%{box-shadow:0 3px 0 rgba(217,83,79,.4), 0 0 0 16px rgba(217,83,79,0);}}
+.ptt-btn .ptt-ic{font-size:40px;}
+.ptt-btn .ptt-label{font-family:var(--disp); font-weight:700; font-size:15px; text-align:center; line-height:1.3;}
+.ptt-btn .ptt-label .np-sub{display:block; font-size:12.5px; font-weight:600; opacity:.8; margin-top:2px;}
+.ptt-hint{font-size:13.5px; color:var(--ink-soft); text-align:center; margin-top:16px; line-height:1.5;}
+.voice-note-preview{display:flex; align-items:center; gap:10px; background:var(--teal-100); border-radius:12px; padding:10px 12px; margin-bottom:10px;}
+.voice-note-preview audio{flex:1; height:34px;}
+.record-mini-btn{width:44px; height:44px; border-radius:50%; border:none; background:var(--teal-600); color:#fff; font-size:20px; flex-shrink:0; box-shadow:0 4px 0 #124f52;}
+.record-mini-btn.recording{background:var(--red); box-shadow:0 4px 0 #a43c39; animation:pttpulse 1s ease-in-out infinite;}
+.note-card .n-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;}
+.note-card .n-meta{font-size:12.5px; color:var(--ink-soft); font-family:var(--mono);}
+.note-card .n-text{font-size:15.5px; color:var(--ink); line-height:1.5; white-space:pre-wrap;}
+.note-del{width:26px; height:26px; border-radius:7px; background:var(--red-bg); color:var(--red); border:none; font-size:15px; flex-shrink:0; box-shadow:0 2px 0 rgba(217,83,79,.2);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== LOGIN ===================== -->
+  <div id="screen-login" class="login-wrap">
+    <div class="login-brand">
+      <div class="tag">Burjeel Medical City</div>
+      <h1>Housekeeping &amp; Bed Making Ops Board</h1>
+      <p>Cleaning status, linen supply and room priority — tracked in one place.</p>
+    </div>
+    <div class="login-card">
+      <div class="field">
+        <label>Role</label>
+        <div class="pick3">
+          <button type="button" class="pick-btn active" data-combo="Housekeeping" onclick="pickCombo('Housekeeping')"><span class="ic">🧹</span>Housekeeping<span class="np-sub">सरसफाई</span></button>
+          <button type="button" class="pick-btn" data-combo="BedMaking" onclick="pickCombo('BedMaking')"><span class="ic">🛏️</span>Bed Making<span class="np-sub">ओछ्यान</span></button>
+          <button type="button" class="pick-btn" data-combo="Supervisor" onclick="pickCombo('Supervisor')"><span class="ic">🗂️</span>Supervisor<span class="np-sub">सुपरवाइजर</span></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Your Name — <span id="rosterLabel">Staff</span></label>
+        <div class="name-picker" id="namePickerList"></div>
+        <div class="name-crud-row">
+          <button type="button" class="crud-add" onclick="addRosterName()">+ Add<span class="np-sub">थप्नुहोस्</span></button>
+          <button type="button" class="crud-update" onclick="updateRosterName()">✏️ Update<span class="np-sub">परिवर्तन</span></button>
+          <button type="button" class="crud-delete" onclick="deleteRosterName()">🗑️ Delete<span class="np-sub">मेटाउनुहोस्</span></button>
+        </div>
+      </div>
+      <div class="err-text" id="loginErr">Please add and select your name.</div>
+
+      <div class="field">
+        <label>Shift</label>
+        <div class="pick2">
+          <button type="button" class="pick-btn active" data-shift="Day" onclick="pickShift('Day')"><span class="ic">☀️</span>Day Shift<span class="np-sub">दिन सिफ्ट</span></button>
+          <button type="button" class="pick-btn" data-shift="Night" onclick="pickShift('Night')"><span class="ic">🌙</span>Night Shift<span class="np-sub">रात सिफ्ट</span></button>
+        </div>
+      </div>
+
+      <button class="primary-btn" onclick="doLogin()">Start Shift<span class="np-sub">सिफ्ट सुरु गर्नुहोस्</span></button>
+    </div>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div id="screen-dashboard" class="hidden">
+    <div class="topbar">
+      <div class="titles">
+        <h1>BMC Ops Board</h1>
+        <div class="sub" id="dashSub">Housekeeping · Bed Making</div>
+      </div>
+      <button class="who" id="whoBadge" onclick="openAccountPanel()"></button>
+    </div>
+    <div class="screen">
+      <div class="section-label" style="margin-top:0;">🧹 Housekeeping</div>
+      <div class="stat-strip">
+        <div class="stat"><div class="n" id="statHkDone">0</div><div class="l">Done</div></div>
+        <div class="stat amber"><div class="n" id="statHkPending">0</div><div class="l">Pending</div></div>
+      </div>
+      <div class="section-label">🛏️ Bed Making</div>
+      <div class="stat-strip">
+        <div class="stat"><div class="n" id="statBmDone">0</div><div class="l">Done</div></div>
+        <div class="stat red"><div class="n" id="statLowLinen">0</div><div class="l">Low Linen</div></div>
+      </div>
+
+      <div id="supervisorStatsBlock" style="display:none;">
+        <div class="section-label">🛌 Occupancy — कोठा अवस्था</div>
+        <div class="stat-strip" style="grid-template-columns:1fr;">
+          <div class="stat"><div class="n" id="statVacant">0</div><div class="l">Vacant Rooms / खाली कोठा</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Alerts &amp; Reminders</div>
+      <div class="action-tiles">
+        <button class="tile" onclick="openFullReport()">
+          <span class="ic">📋</span>
+          <div class="t">Full Shift Report<span class="np-sub">पूरा सिफ्ट रिपोर्ट</span></div>
+          <div class="d">All buildings, WhatsApp-ready</div>
+        </button>
+        <button class="tile" onclick="showScreen('screen-lowlinen')">
+          <span class="ic">🧺</span>
+          <div class="t">Low Linen<span class="np-sub">लत्ता कम</span></div>
+          <div class="d" id="tileLowLinenD">0 rooms below par</div>
+        </button>
+        <button class="tile" onclick="showScreen('screen-vip')">
+          <span class="ic">⭐</span>
+          <div class="t">VIP &amp; VVIP<span class="np-sub">विशेष कोठा</span></div>
+          <div class="d" id="tileVipD">0 rooms flagged</div>
+        </button>
+        <button class="tile" onclick="showScreen('screen-flags')">
+          <span class="ic">🚩</span>
+          <div class="t">Priority Flags<span class="np-sub">प्राथमिकता झण्डा</span></div>
+          <div class="d" id="tileFlagD">0 rooms flagged</div>
+        </button>
+        <button class="tile" id="vacantTile" style="display:none;" onclick="showScreen('screen-vacant')">
+          <span class="ic">🛌</span>
+          <div class="t">Vacant Rooms<span class="np-sub">खाली कोठा</span></div>
+          <div class="d" id="tileVacantD">0 rooms vacant</div>
+        </button>
+        <button class="tile" id="messageStaffTile" style="display:none;" onclick="showScreen('screen-message-compose')">
+          <span class="ic">💬</span>
+          <div class="t">Message Staff<span class="np-sub">स्टाफलाई सन्देश</span></div>
+          <div class="d">Send a personal message</div>
+        </button>
+        <button class="tile" onclick="showScreen('screen-group-talk')">
+          <span class="ic wt-icon"><svg width="1.3em" height="1.3em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-4px;">
+            <line x1="15" y1="2" x2="18.5" y2="5.5" stroke="#8AA39E" stroke-width="1.6" stroke-linecap="round"/>
+            <rect x="6.5" y="4.5" width="11" height="17" rx="2.2" fill="#0F3D3E"/>
+            <rect x="8.3" y="6.3" width="7.4" height="4.6" rx="1" fill="#1B6B6F"/>
+            <circle cx="10.2" cy="14.3" r="1.15" fill="#E3A008"/>
+            <circle cx="13.8" cy="14.3" r="1.15" fill="#D9534F"/>
+            <rect x="8.6" y="17.3" width="6.8" height="2.3" rx="1.1" fill="#DCEAE9"/>
+          </svg></span>
+          <div class="t">Group Talk<span class="np-sub">समूह कुराकानी</span></div>
+          <div class="d">Push-to-talk voice channel</div>
+        </button>
+      </div>
+      <button class="notepad-btn" id="inboxTile" style="display:none;" onclick="showScreen('screen-inbox')">
+        <span class="ic">💬</span>
+        <div>
+          <div class="t">Messages<span class="np-sub">सन्देशहरू</span></div>
+          <div class="d" id="tileInboxD">No new messages</div>
+        </div>
+      </button>
+      <button class="notepad-btn" onclick="showScreen('screen-notepad')">
+        <span class="ic">📝</span>
+        <div>
+          <div class="t">Notepad<span class="np-sub">नोटप्याड</span></div>
+          <div class="d">Shift notes &amp; handover messages</div>
+        </div>
+      </button>
+      <button class="notepad-btn" onclick="showScreen('screen-supervisors')">
+        <span class="ic">🗂️</span>
+        <div>
+          <div class="t">Supervisors<span class="np-sub">सुपरवाइजरहरू</span></div>
+          <div class="d" id="tileSupD">Manage supervisor roster</div>
+        </div>
+      </button>
+
+      <div class="section-label">Buildings</div>
+      <div id="buildingList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== ZONE LIST (BMC Main only) ===================== -->
+  <div id="screen-zones" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1 id="zonesTitle">BMC Main</h1><div class="sub">Select Zone</div></div>
+    </div>
+    <div class="screen" id="zonesList"></div>
+  </div>
+
+  <!-- ===================== FLOOR LIST ===================== -->
+  <div id="screen-floors" class="hidden">
+    <div class="topbar">
+      <button class="back" id="floorsBack">←</button>
+      <div class="titles"><h1 id="floorsTitle">Floors</h1><div class="sub" id="floorsSub"></div></div>
+    </div>
+    <div class="screen">
+      <div id="floorsList"></div>
+      <button class="wa-btn" style="background:var(--teal-800); box-shadow:0 4px 0 rgba(11,46,47,.4); margin-top:10px;" onclick="openLevelReport()">📋 Report for this area</button>
+    </div>
+  </div>
+
+  <!-- ===================== ROOM LIST ===================== -->
+  <div id="screen-rooms" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-floors')">←</button>
+      <div class="titles"><h1 id="roomsTitle">Floor</h1><div class="sub" id="roomsSub"></div></div>
+    </div>
+    <div class="screen">
+      <div class="legend-strip" id="legendStrip"></div>
+      <div id="roomsList"></div>
+      <button class="add-room-btn" onclick="addRoom()">+ Add Room</button>
+      <button class="wa-btn" style="background:var(--teal-800); box-shadow:0 4px 0 rgba(11,46,47,.4);" onclick="openLevelReport()">📋 Report for this floor</button>
+    </div>
+  </div>
+
+  <!-- ===================== LOW LINEN ===================== -->
+  <div id="screen-lowlinen" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Low Linen Alerts</h1><div class="sub">Below par level</div></div>
+    </div>
+    <div class="screen" id="lowLinenList"></div>
+  </div>
+
+  <!-- ===================== VIP / VVIP ===================== -->
+  <div id="screen-vip" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>VIP &amp; VVIP Rooms</h1><div class="sub">Priority reminder</div></div>
+    </div>
+    <div class="screen" id="vipList"></div>
+  </div>
+
+  <!-- ===================== PRIORITY FLAGS ===================== -->
+  <div id="screen-flags" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Priority Flags</h1><div class="sub">Urgent · Issue · Refused</div></div>
+    </div>
+    <div class="screen">
+      <div class="legend-strip" id="legendStrip2"></div>
+      <div id="flagsList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== NOTEPAD ===================== -->
+  <div id="screen-notepad" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Notepad</h1><div class="sub">Shift notes &amp; handover</div></div>
+    </div>
+    <div class="screen">
+      <button class="add-room-btn" onclick="addNote()">+ Add Note</button>
+      <div id="notesList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== SUPERVISORS ===================== -->
+  <div id="screen-supervisors" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Supervisors</h1><div class="sub">Day &amp; Night Roster</div></div>
+    </div>
+    <div class="screen">
+      <button class="add-room-btn" onclick="addSupervisor()">+ Add Supervisor</button>
+      <div id="supervisorsList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== VACANT ROOMS ===================== -->
+  <div id="screen-vacant" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Vacant Rooms</h1><div class="sub">खाली कोठा · Occupancy reminder</div></div>
+    </div>
+    <div class="screen" id="vacantList"></div>
+  </div>
+
+  <!-- ===================== MESSAGE STAFF (Supervisor compose) ===================== -->
+  <div id="screen-message-compose" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Message Staff</h1><div class="sub">स्टाफलाई सन्देश · Personal message</div></div>
+    </div>
+    <div class="screen">
+      <div class="section-label" style="margin-top:0;">🧹🛏️ Select Staff — स्टाफ छान्नुहोस्</div>
+      <div class="name-picker" id="msgStaffList"></div>
+      <div class="field" style="margin-top:14px;">
+        <label>Sending to</label>
+        <input type="text" id="msgToDisplay" placeholder="Tap a name above" disabled>
+      </div>
+      <div class="field">
+        <label>Message</label>
+        <textarea id="msgComposeText" rows="4" placeholder="e.g. Please prioritize Room 512, family arriving soon..."></textarea>
+      </div>
+      <div class="field">
+        <label>Or record a voice note / आवाज सन्देश</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button type="button" class="record-mini-btn" id="voiceRecordBtn" onclick="toggleVoiceNoteRecord()">🎙️</button>
+          <div style="font-size:14px; color:var(--ink-soft); flex:1;">Tap to start, tap again to stop.</div>
+        </div>
+        <div id="voiceNotePreviewWrap" style="margin-top:10px;"></div>
+      </div>
+      <div id="msgComposeErr" style="color:var(--red); font-size:14.5px; margin-bottom:10px; display:none;"></div>
+      <button class="primary-btn" onclick="sendStaffMessage()">Send Message</button>
+      <div class="section-label">Recently Sent</div>
+      <div id="sentMessagesList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== INBOX (Staff messages) ===================== -->
+  <div id="screen-inbox" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Messages</h1><div class="sub">सन्देशहरू · From your supervisor</div></div>
+    </div>
+    <div class="screen" id="inboxList"></div>
+  </div>
+
+  <!-- ===================== GROUP TALK (walkie-talkie) ===================== -->
+  <div id="screen-group-talk" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>Group Talk</h1><div class="sub">समूह कुराकानी · Push-to-talk</div></div>
+    </div>
+    <div class="screen">
+      <div class="ptt-wrap">
+        <button id="pttButton" class="ptt-btn"
+          onpointerdown="pttStart(event)" onpointerup="pttEnd(event)" onpointercancel="pttCancelIfActive()" onpointerleave="pttCancelIfActive()">
+          <span class="ptt-ic" id="pttIcon">🎙️</span>
+          <span class="ptt-label" id="pttLabel">HOLD TO TALK<span class="np-sub">थिच्नुहोस् र बोल्नुहोस्</span></span>
+        </button>
+        <div class="ptt-hint">Press and hold to record, release to send to everyone on this device.<br>सबैलाई पठाउन थिच्नुहोस् र बोलेपछि छोड्नुहोस्।</div>
+        <div class="ptt-hint" style="margin-top:4px; opacity:.75;">🕐 Voice messages auto-delete after 7 days.<br>आवाज सन्देशहरू ७ दिनपछि स्वतः मेटिन्छ।</div>
+        <div class="ptt-hint" id="pttDiagnostic" style="margin-top:6px;"></div>
+        <button type="button" id="pttRequestBtn" class="btn-secondary" style="display:none; margin-top:10px; padding:11px 20px;" onclick="requestMicAccess()">Request Microphone Access</button>
+      </div>
+      <div class="section-label">Recent Voice Messages</div>
+      <div id="groupFeedList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== REPORT SCREEN ===================== -->
+  <div id="screen-report" class="hidden">
+    <div class="topbar">
+      <button class="back" onclick="showScreen('screen-dashboard')">←</button>
+      <div class="titles"><h1>WhatsApp Report</h1><div class="sub" id="reportSub"></div></div>
+    </div>
+    <div class="screen">
+      <div class="report-box" id="reportText"></div>
+      <button class="wa-btn" onclick="sendWhatsApp()">📲 Send via WhatsApp</button>
+      <button class="copy-btn" onclick="copyReport()">Copy Text</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+   ============================================================ */
+const PAR_LEVEL = { bedsheets:2, pillowcovers:2, blankets:1, towels:1 };
+const DEFAULT_PAR = 1;
+function parForItem(it){ return PAR_LEVEL[it.id] !== undefined ? PAR_LEVEL[it.id] : DEFAULT_PAR; }
+function defaultLinenItems(){
+  return [
+    { id:'bedsheets', name:'Bed Sheets', qty:0 },
+    { id:'pillowcovers', name:'Pillow Covers', qty:0 },
+    { id:'blankets', name:'Blankets', qty:0 },
+    { id:'towels', name:'Towels', qty:0 }
+  ];
+}
+
+const WALKIE_SVG_LARGE = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="15" y1="2" x2="18.5" y2="5.5" stroke="#8AA39E" stroke-width="1.6" stroke-linecap="round"/>
+  <rect x="6.5" y="4.5" width="11" height="17" rx="2.2" fill="#0F3D3E"/>
+  <rect x="8.3" y="6.3" width="7.4" height="4.6" rx="1" fill="#1B6B6F"/>
+  <circle cx="10.2" cy="14.3" r="1.15" fill="#E3A008"/>
+  <circle cx="13.8" cy="14.3" r="1.15" fill="#D9534F"/>
+  <rect x="8.6" y="17.3" width="6.8" height="2.3" rx="1.1" fill="#DCEAE9"/>
+</svg>`;
+
+const FLAG_META = {
+  none:       { label:'None',       np:'केही छैन',      color:'#B9C4C0' },
+  urgent:     { label:'Urgent',     np:'जरुरी',          color:'#D9534F' },
+  pending:    { label:'Work Pending', np:'काम बाँकी',    color:'#E3A008' },
+  done:       { label:'Work Done',  np:'काम सकियो',      color:'#2F9E63' },
+  refused:    { label:'Patient Refused', np:'बिरामी इन्कार', color:'#1A1A1A' },
+  supervisor: { label:'Need Supervisor', np:'सुपरवाइजर चाहियो', color:'#F2994A' }
+};
+
+const BUILDINGS = {
+  BMC: {
+    name: "BMC Main", code:"BMC", color:"#0F3D3E", icon:"🏥",
+    hasZones:true,
+    zones: {
+      A: { name:"Zone A", floors:["Basement","Ground","1st","2nd","3rd","4th","5th","6th","7th","8th"] },
+      B: { name:"Zone B", floors:["Basement","Ground","1st","2nd","3rd","4th","5th","6th","7th","8th"] },
+      C: { name:"Zone C", floors:["Basement","Ground","1st","2nd","3rd","4th","5th","6th","7th","8th"] },
+      D: { name:"Zone D", floors:["Basement","Ground","1st","2nd","3rd","4th","5th","6th","7th","8th"] }
+    }
+  },
+  BCI: { name:"Burjeel Cancer Institute", code:"BCI", color:"#1B6B6F", icon:"🎗️", hasZones:false, floors:["Ground","1st","2nd","3rd","4th"] },
+  LTC: { name:"Long Term Care", code:"LTC", color:"#2E6FA7", icon:"🛏️", hasZones:false, floors:["Ground","1st","2nd","3rd","4th"] }
+};
+
+const STORAGE_KEY = "bmc_hk_bm_data_v3";
+const SESSION_KEY = "bmc_hk_bm_session_v2";
+
+let DATA = loadData();
+let SESSION = loadSession();
+let NAV = { building:null, zone:null, floor:null, activeRoomKey:null };
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const d = raw ? JSON.parse(raw) : { rooms:{}, notes:[], supervisors:[], staff:[], messages:[], groupMessages:[] };
+    if(!d.supervisors) d.supervisors = [];
+    if(!d.staff) d.staff = [];
+    if(!d.notes) d.notes = [];
+    if(!d.messages) d.messages = [];
+    if(!d.groupMessages) d.groupMessages = [];
+    return d;
+  }catch(e){ return { rooms:{}, notes:[], supervisors:[], staff:[], messages:[], groupMessages:[] }; }
+}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    return true;
+  }catch(e){
+    console.error('Save failed', e);
+    showToast('⚠️ Storage full — delete some old voice messages or notes, then try again');
+    return false;
+  }
+}
+function loadSession(){
+  try{ const raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function saveSession(){
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify(SESSION)); }
+  catch(e){ console.error('Session save failed', e); }
+}
+
+function roomKey(b,z,f,roomId){ return [b,z||'-',f,roomId].join('::'); }
+function getRoomsFor(b,z,f){
+  const prefix = [b, z||'-', f].join('::') + '::';
+  return Object.keys(DATA.rooms).filter(k=>k.startsWith(prefix)).map(k=>DATA.rooms[k]).sort((a,b2)=>a.num.localeCompare(b2.num, undefined, {numeric:true}));
+}
+function allRoomsInBuilding(code){ return Object.keys(DATA.rooms).filter(k=>k.startsWith(code+'::')).map(k=>DATA.rooms[k]); }
+function allRooms(){ return Object.values(DATA.rooms); }
+function isLow(r){
+  const items = r.linenItems || [];
+  return items.some(it => (it.qty||0) < parForItem(it));
+}
+function norm(r){
+  if(!r.flag) r.flag='none';
+  if(!r.occupancy) r.occupancy='occupied';
+  if(!r.priority) r.priority='normal';
+  if(!r.linenItems){
+    if(r.linen){
+      r.linenItems = [
+        { id:'bedsheets', name:'Bed Sheets', qty:r.linen.bedsheets||0 },
+        { id:'pillowcovers', name:'Pillow Covers', qty:r.linen.pillowcovers||0 },
+        { id:'blankets', name:'Blankets', qty:r.linen.blankets||0 },
+        { id:'towels', name:'Towels', qty:r.linen.towels||0 }
+      ];
+      delete r.linen;
+    } else {
+      r.linenItems = defaultLinenItems();
+    }
+  }
+  return r;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+let pickedRole = "Staff", pickedScope = "Housekeeping", pickedShift = "Day", selectedLoginName = "";
+function rosterFor(role){ return role==='Supervisor' ? (DATA.supervisors||[]) : (DATA.staff||[]); }
+function pickCombo(combo){
+  if(combo==='Housekeeping'){ pickedRole='Staff'; pickedScope='Housekeeping'; }
+  else if(combo==='BedMaking'){ pickedRole='Staff'; pickedScope='Bed Making'; }
+  else { pickedRole='Supervisor'; pickedScope='Both'; }
+  document.querySelectorAll('.pick-btn[data-combo]').forEach(b=>b.classList.toggle('active', b.dataset.combo===combo));
+  document.getElementById('rosterLabel').textContent = pickedRole==='Supervisor' ? 'Supervisor' : combo==='Housekeeping' ? 'Housekeeping' : 'Bed Making';
+  selectedLoginName = "";
+  renderNamePicker();
+}
+function pickShift(s){
+  pickedShift = s;
+  document.querySelectorAll('.pick-btn[data-shift]').forEach(b=>b.classList.toggle('active', b.dataset.shift===s));
+}
+function renderNamePicker(){
+  const wrap = document.getElementById('namePickerList');
+  if(!wrap) return;
+  const roster = rosterFor(pickedRole).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(roster.length===0){
+    wrap.innerHTML = `<div class="name-empty">No ${pickedRole.toLowerCase()} names yet — tap "+ Add" to create one.</div>`;
+    return;
+  }
+  wrap.innerHTML = roster.map(p => `<button type="button" class="name-chip${selectedLoginName===p.name?' active':''}" onclick="selectLoginName('${p.name.replace(/'/g,"\\'")}')">${p.name}</button>`).join('');
+}
+function selectLoginName(name){
+  selectedLoginName = name;
+  document.getElementById('loginErr').style.display='none';
+  renderNamePicker();
+}
+function addRosterName(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Add ${pickedRole} Name</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="rosterNewName" placeholder="e.g. Ram Bahadur" autofocus>
+        </div>
+        <div id="rosterAddErr" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmAddRosterName()">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById('rosterNewName');
+  input.focus();
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmAddRosterName(); });
+}
+function confirmAddRosterName(){
+  const input = document.getElementById('rosterNewName');
+  const errBox = document.getElementById('rosterAddErr');
+  const name = input.value.trim();
+  if(!name){ errBox.textContent='Please enter a name.'; errBox.style.display='block'; return; }
+  const roster = rosterFor(pickedRole);
+  if(roster.some(p=>p.name.toLowerCase()===name.toLowerCase())){ errBox.textContent='This name already exists.'; errBox.style.display='block'; return; }
+  roster.push({ id:'p'+Date.now()+Math.floor(Math.random()*1000), name });
+  saveData();
+  selectedLoginName = name;
+  closeModal();
+  renderNamePicker();
+}
+function updateRosterName(){
+  if(!selectedLoginName){ showToast('Select a name first'); return; }
+  const roster = rosterFor(pickedRole);
+  const p = roster.find(x=>x.name===selectedLoginName);
+  if(!p) return;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Update Name</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="rosterEditName" value="${p.name.replace(/"/g,'&quot;')}" autofocus>
+        </div>
+        <div id="rosterEditErr" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmUpdateRosterName('${p.id}')">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById('rosterEditName');
+  input.focus(); input.select();
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmUpdateRosterName(p.id); });
+}
+function confirmUpdateRosterName(id){
+  const input = document.getElementById('rosterEditName');
+  const errBox = document.getElementById('rosterEditErr');
+  const name = input.value.trim();
+  if(!name){ errBox.textContent='Please enter a name.'; errBox.style.display='block'; return; }
+  const roster = rosterFor(pickedRole);
+  const p = roster.find(x=>x.id===id);
+  if(!p) return;
+  p.name = name;
+  saveData();
+  selectedLoginName = name;
+  closeModal();
+  renderNamePicker();
+}
+function deleteRosterName(){
+  if(!selectedLoginName){ showToast('Select a name first'); return; }
+  const roster = rosterFor(pickedRole);
+  const p = roster.find(x=>x.name===selectedLoginName);
+  if(!p) return;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Remove Name?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">Remove ${p.name} from the ${pickedRole.toLowerCase()} list? This can't be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteRosterName('${p.id}')">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteRosterName(id){
+  const roster = rosterFor(pickedRole);
+  const idx = roster.findIndex(x=>x.id===id);
+  if(idx>-1) roster.splice(idx,1);
+  saveData();
+  selectedLoginName = "";
+  closeModal();
+  renderNamePicker();
+}
+function doLogin(){
+  const errEl = document.getElementById('loginErr');
+  if(!selectedLoginName){ errEl.textContent='Please add and select your name.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  SESSION = { name: selectedLoginName, role: pickedRole, scope: pickedRole==='Supervisor' ? 'Both' : pickedScope, shift: pickedShift };
+  saveSession();
+  enterApp();
+}
+function enterApp(){
+  document.getElementById('whoBadge').textContent = SESSION.name + ' · ' + SESSION.role + ' · ' + SESSION.shift;
+  document.getElementById('dashSub').textContent = SESSION.scope + ' · ' + SESSION.shift + ' Shift';
+  renderDashboard();
+  showScreen('screen-dashboard');
+}
+function canEditHK(){ return SESSION.role==='Supervisor' || SESSION.scope==='Housekeeping'; }
+function canEditBM(){ return SESSION.role==='Supervisor' || SESSION.scope==='Bed Making'; }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function showScreen(id){
+  if(id!=='screen-group-talk' && pttActive){ pttCancelIfActive(); }
+  if(id!=='screen-message-compose' && privateRecordActive){ cancelPrivateRecording(); }
+  document.querySelectorAll('#app > div[id^="screen-"]').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0,0);
+  if(id==='screen-vip') renderVipList();
+  if(id==='screen-flags') renderFlagsList();
+  if(id==='screen-notepad') renderNotepad();
+  if(id==='screen-supervisors') renderSupervisors();
+  if(id==='screen-lowlinen') renderLowLinen();
+  if(id==='screen-vacant') renderVacantList();
+  if(id==='screen-message-compose'){ purgeOldVoiceMessages(); renderMessageCompose(); }
+  if(id==='screen-inbox'){ purgeOldVoiceMessages(); renderInbox(); }
+  if(id==='screen-group-talk'){ purgeOldVoiceMessages(); renderGroupFeed(); showMicDiagnostic(); }
+}
+
+/* ============================================================
+   LEGEND
+   ============================================================ */
+function legendHtml(){
+  return Object.keys(FLAG_META).filter(k=>k!=='none').map(k=>{
+    const m = FLAG_META[k];
+    return `<div class="legend-chip"><span class="legend-dot" style="background:${m.color}"></span>${m.label} / ${m.np}</div>`;
+  }).join('');
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function computeStats(){
+  const rooms = allRooms();
+  let hkDone=0, hkPending=0, bmDone=0, lowLinen=0, vipCount=0, flagCount=0, vacantCount=0;
+  rooms.forEach(r=>{
+    norm(r);
+    if(r.hkStatus==='done') hkDone++; else if(r.hkStatus==='pending'||r.hkStatus==='progress') hkPending++;
+    if(r.bmStatus==='done') bmDone++;
+    if(isLow(r)) lowLinen++;
+    if(r.priority==='vip' || r.priority==='vvip') vipCount++;
+    if(r.flag && r.flag!=='none') flagCount++;
+    if(r.occupancy==='vacant') vacantCount++;
+  });
+  return {hkDone,hkPending,bmDone,lowLinen,vipCount,flagCount,vacantCount,total:rooms.length};
+}
+function renderDashboard(){
+  const s = computeStats();
+  document.getElementById('statHkDone').textContent = s.hkDone;
+  document.getElementById('statHkPending').textContent = s.hkPending;
+  document.getElementById('statBmDone').textContent = s.bmDone;
+  document.getElementById('statLowLinen').textContent = s.lowLinen;
+  document.getElementById('tileLowLinenD').textContent = s.lowLinen + ' room' + (s.lowLinen!==1?'s':'') + ' below par';
+  document.getElementById('tileVipD').textContent = s.vipCount + ' room' + (s.vipCount!==1?'s':'') + ' flagged';
+  document.getElementById('tileFlagD').textContent = s.flagCount + ' room' + (s.flagCount!==1?'s':'') + ' flagged';
+  document.getElementById('tileSupD').textContent = (DATA.supervisors||[]).length + ' supervisor' + ((DATA.supervisors||[]).length!==1?'s':'') + ' on roster';
+
+  const isSupervisor = SESSION.role==='Supervisor';
+  document.getElementById('supervisorStatsBlock').style.display = isSupervisor ? 'block' : 'none';
+  document.getElementById('vacantTile').style.display = isSupervisor ? 'block' : 'none';
+  document.getElementById('messageStaffTile').style.display = isSupervisor ? 'block' : 'none';
+  document.getElementById('inboxTile').style.display = isSupervisor ? 'none' : 'block';
+  if(isSupervisor){
+    document.getElementById('statVacant').textContent = s.vacantCount;
+    document.getElementById('tileVacantD').textContent = s.vacantCount + ' room' + (s.vacantCount!==1?'s':'') + ' vacant';
+  } else {
+    const unread = (DATA.messages||[]).filter(m=>m.toName===SESSION.name && !m.read).length;
+    document.getElementById('tileInboxD').textContent = unread>0 ? unread + ' new message' + (unread!==1?'s':'') : 'No new messages';
+  }
+
+  const list = document.getElementById('buildingList');
+  list.innerHTML = '';
+  Object.keys(BUILDINGS).forEach(code=>{
+    const b = BUILDINGS[code];
+    const rooms = allRoomsInBuilding(code);
+    const hkDone = rooms.filter(r=>r.hkStatus==='done').length;
+    const bmDone = rooms.filter(r=>r.bmStatus==='done').length;
+    const div = document.createElement('div');
+    div.className = 'bldg-card';
+    div.innerHTML = `
+      <div class="bar" style="background:${b.color}"></div>
+      <button class="body" onclick="openBuilding('${code}')">
+        <div>
+          <div class="name">${b.icon} ${b.name}</div>
+          <div class="meta">${rooms.length} room${rooms.length!==1?'s':''} tracked<br>🧹 HK ${hkDone}/${rooms.length} · 🛏️ BM ${bmDone}/${rooms.length}</div>
+        </div>
+        <div class="chev">›</div>
+      </button>`;
+    list.appendChild(div);
+  });
+}
+function openBuilding(code){
+  NAV.building = code; NAV.zone = null; NAV.floor = null;
+  const b = BUILDINGS[code];
+  if(b.hasZones){ renderZones(); showScreen('screen-zones'); }
+  else { renderFloors(); showScreen('screen-floors'); }
+}
+
+/* ============================================================
+   ZONES
+   ============================================================ */
+function renderZones(){
+  const b = BUILDINGS[NAV.building];
+  document.getElementById('zonesTitle').textContent = b.name;
+  const wrap = document.getElementById('zonesList');
+  wrap.innerHTML = '';
+  Object.keys(b.zones).forEach(zc=>{
+    const z = b.zones[zc];
+    const rooms = Object.keys(DATA.rooms).filter(k=>k.startsWith(NAV.building+'::'+zc+'::')).map(k=>DATA.rooms[k]);
+    const hkDone = rooms.filter(r=>r.hkStatus==='done').length;
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ NAV.zone = zc; renderFloors(); showScreen('screen-floors'); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">${z.name}</div>
+        <div class="li-sub">${z.floors.length} floors · ${rooms.length} rooms tracked</div>
+      </div>
+      <div class="li-badge ${rooms.length? (hkDone===rooms.length?'badge-done':'badge-pending'):'badge-none'}">${rooms.length? hkDone+'/'+rooms.length : 'No data'}</div>`;
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   FLOORS
+   ============================================================ */
+function renderFloors(){
+  const b = BUILDINGS[NAV.building];
+  const floors = b.hasZones ? b.zones[NAV.zone].floors : b.floors;
+  const titleBase = b.hasZones ? b.name + ' — ' + b.zones[NAV.zone].name : b.name;
+  document.getElementById('floorsTitle').textContent = titleBase;
+  document.getElementById('floorsSub').textContent = 'Select Floor';
+  document.getElementById('floorsBack').onclick = ()=> showScreen(b.hasZones ? 'screen-zones' : 'screen-dashboard');
+
+  const wrap = document.getElementById('floorsList');
+  wrap.innerHTML = '';
+  floors.forEach(f=>{
+    const rooms = getRoomsFor(NAV.building, NAV.zone, f);
+    const hkDone = rooms.filter(r=>r.hkStatus==='done').length;
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ NAV.floor = f; renderRooms(); showScreen('screen-rooms'); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">${f} Floor</div>
+        <div class="li-sub">${rooms.length} room${rooms.length!==1?'s':''} tracked</div>
+      </div>
+      <div class="li-badge ${rooms.length? (hkDone===rooms.length?'badge-done':'badge-pending'):'badge-none'}">${rooms.length? hkDone+'/'+rooms.length : 'No data'}</div>`;
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   ROOMS
+   ============================================================ */
+function renderRooms(){
+  document.getElementById('legendStrip').innerHTML = legendHtml();
+  const b = BUILDINGS[NAV.building];
+  const label = (b.hasZones ? b.zones[NAV.zone].name + ' · ' : '') + NAV.floor + ' Floor';
+  document.getElementById('roomsTitle').textContent = b.name;
+  document.getElementById('roomsSub').textContent = label;
+
+  const rooms = getRoomsFor(NAV.building, NAV.zone, NAV.floor);
+  const wrap = document.getElementById('roomsList');
+  wrap.innerHTML = '';
+  if(rooms.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">🚪</span>No rooms added yet for this floor.<br>Tap "Add Room" to start tracking.</div>`;
+    return;
+  }
+  const statusLabel = {pending:'Pending', progress:'Doing', done:'Done', na:'N/A'};
+  rooms.forEach(r=>{
+    norm(r);
+    const div = document.createElement('div');
+    div.className='room-card';
+    const items = r.linenItems||[];
+    const low = isLow(r);
+    const barColor = (r.flag && r.flag!=='none') ? FLAG_META[r.flag].color : {pending:'var(--amber)',progress:'var(--blue)',done:'var(--green)',na:'var(--ink-soft)'}[r.hkStatus];
+    let tags = '';
+    if(r.priority==='vip') tags += `<span class="mini-tag" style="background:var(--gold-bg); color:var(--gold);">⭐ VIP</span>`;
+    if(r.priority==='vvip') tags += `<span class="mini-tag" style="background:var(--purple-bg); color:var(--purple);">🌟 VVIP</span>`;
+    if(r.occupancy==='vacant') tags += `<span class="mini-tag" style="background:var(--line); color:var(--ink-soft);">VACANT</span>`;
+    if(r.flag && r.flag!=='none') tags += `<span class="mini-tag" style="background:${FLAG_META[r.flag].color}22; color:${FLAG_META[r.flag].color==='#1A1A1A'?'#1A1A1A':FLAG_META[r.flag].color};">● ${FLAG_META[r.flag].label}</span>`;
+    div.innerHTML = `
+      <button class="rc-top" onclick="openRoom('${r.key}')">
+        <div class="rc-bar" style="background:${barColor}"></div>
+        <div style="flex:1;">
+          <div class="rc-num">Room ${r.num} ${tags}</div>
+          <div class="rc-info">🧹 ${r.hkBy || 'Unassigned'}${low? ' · ⚠️ Low linen' : ''}<br>🛏️ ${r.bmBy || 'Unassigned'}</div>
+        </div>
+        <div class="rc-badges">
+          <div class="rc-pill st-${r.hkStatus}">HK ${statusLabel[r.hkStatus]}</div>
+          <div class="rc-pill st-${r.bmStatus}">BM ${statusLabel[r.bmStatus]}</div>
+        </div>
+      </button>
+      <div class="rc-linen">🛏️ ${items.length ? items.map(it=>it.name+' '+(it.qty||0)).join(' · ') : 'No linen items'}</div>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function addRoom(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Add Room</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Room Number / Name</label>
+          <input type="text" id="newRoomNum" placeholder="e.g. 501" autofocus>
+        </div>
+        <div id="addRoomError" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmAddRoom()">Add Room</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById('newRoomNum');
+  input.focus();
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmAddRoom(); });
+}
+function confirmAddRoom(){
+  const input = document.getElementById('newRoomNum');
+  const errBox = document.getElementById('addRoomError');
+  const num = input.value.trim();
+  if(!num){ errBox.textContent='Please enter a room number or name.'; errBox.style.display='block'; return; }
+  const b = NAV.building, z = NAV.zone, f = NAV.floor;
+  const key = roomKey(b,z,f,num);
+  if(DATA.rooms[key]){ errBox.textContent='This room already exists on this floor.'; errBox.style.display='block'; return; }
+  DATA.rooms[key] = {
+    key, building:b, zone:z, floor:f, num,
+    hkStatus:'pending', hkBy:'',
+    bmStatus:'pending', bmBy:'',
+    occupancy:'occupied', priority:'normal', flag:'none',
+    notes:'',
+    linenItems: defaultLinenItems(),
+    updatedAt: new Date().toISOString()
+  };
+  saveData();
+  closeModal();
+  renderRooms();
+  renderDashboard();
+}
+
+/* ============================================================
+   ROOM MODAL
+   ============================================================ */
+let curHK='pending', curBM='pending', curOcc='occupied', curPri='normal', curFlag='none', curLinenItems=[], curBmLocked=false;
+function openRoom(key){
+  NAV.activeRoomKey = key;
+  const r = norm(DATA.rooms[key]);
+  curHK = r.hkStatus; curBM = r.bmStatus; curOcc = r.occupancy; curPri = r.priority; curFlag = r.flag;
+  curLinenItems = JSON.parse(JSON.stringify(r.linenItems||[]));
+  const hkLocked = !canEditHK();
+  const bmLocked = !canEditBM();
+  curBmLocked = bmLocked;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Room ${r.num}</h3>
+      </div>
+      <div class="modal-body">
+
+        <div class="scope-card">
+          <div class="scope-head"><span class="ic">🏷️</span><h4>Room Status</h4></div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Occupancy</label>
+            <div class="seg seg2">
+              <button id="segOcc_occupied" onclick="setOcc('occupied')">Occupied<span class="np-sub">ओगटिएको</span></button>
+              <button id="segOcc_vacant" onclick="setOcc('vacant')">Vacant<span class="np-sub">खाली</span></button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Priority</label>
+            <div class="seg seg3">
+              <button id="segPri_normal" onclick="setPri('normal')">Normal<span class="np-sub">सामान्य</span></button>
+              <button id="segPri_vip" onclick="setPri('vip')">⭐ VIP<span class="np-sub">विशेष</span></button>
+              <button id="segPri_vvip" onclick="setPri('vvip')">🌟 VVIP<span class="np-sub">अति विशेष</span></button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Priority Flag / प्राथमिकता झण्डा</label>
+            <div class="flag-grid" id="flagGrid"></div>
+          </div>
+        </div>
+
+        <div class="scope-card ${hkLocked?'locked':''}">
+          <div class="scope-head"><span class="ic">🧹</span><h4>Housekeeping — Cleaning</h4>${hkLocked?'<span class="lock-note">View only</span>':''}</div>
+          <div class="seg">
+            <button id="segHK_pending" ${hkLocked?'disabled':''} onclick="setHK('pending')">Pending<span class="np-sub">बाँकी</span></button>
+            <button id="segHK_progress" ${hkLocked?'disabled':''} onclick="setHK('progress')">Doing<span class="np-sub">गर्दै</span></button>
+            <button id="segHK_done" ${hkLocked?'disabled':''} onclick="setHK('done')">Done<span class="np-sub">सकियो</span></button>
+            <button id="segHK_na" ${hkLocked?'disabled':''} onclick="setHK('na')">N/A<span class="np-sub">लागू छैन</span></button>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Cleaned By / सफा गर्ने</label>
+            <input type="text" id="roomHkBy" value="${((r.hkBy || (!hkLocked ? SESSION.name : '')) || '').replace(/"/g,'&quot;')}" placeholder="Staff name" ${hkLocked?'disabled':''}>
+          </div>
+        </div>
+
+        <div class="scope-card ${bmLocked?'locked':''}">
+          <div class="scope-head"><span class="ic">🛏️</span><h4>Bed Making — Linen</h4>${bmLocked?'<span class="lock-note">View only</span>':''}</div>
+          <div class="seg">
+            <button id="segBM_pending" ${bmLocked?'disabled':''} onclick="setBM('pending')">Pending<span class="np-sub">बाँकी</span></button>
+            <button id="segBM_progress" ${bmLocked?'disabled':''} onclick="setBM('progress')">Doing<span class="np-sub">गर्दै</span></button>
+            <button id="segBM_done" ${bmLocked?'disabled':''} onclick="setBM('done')">Done<span class="np-sub">सकियो</span></button>
+            <button id="segBM_na" ${bmLocked?'disabled':''} onclick="setBM('na')">N/A<span class="np-sub">लागू छैन</span></button>
+          </div>
+          <div class="field">
+            <label>Made By / बनाउने</label>
+            <input type="text" id="roomBmBy" value="${((r.bmBy || (!bmLocked ? SESSION.name : '')) || '').replace(/"/g,'&quot;')}" placeholder="Staff name" ${bmLocked?'disabled':''}>
+          </div>
+          <div class="linen-grid" id="linenGridContainer"></div>
+          <div class="add-item-row" style="${bmLocked?'display:none;':''}">
+            <input type="text" id="newLinenItemName" placeholder="e.g. Praying Mat, Soap...">
+            <button type="button" onclick="addLinenItemInline()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Notes</label>
+          <input type="text" id="roomNotes" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Optional note">
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-danger" onclick="deleteRoom()">Delete</button>
+          <button class="btn-save" onclick="saveRoom()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  reflectSeg('HK', curHK);
+  reflectSeg('BM', curBM);
+  reflectOccPri();
+  buildFlagGrid();
+  renderLinenGrid();
+}
+function renderLinenGrid(){
+  const container = document.getElementById('linenGridContainer');
+  if(!container) return;
+  if(curLinenItems.length===0){
+    container.innerHTML = `<div style="grid-column:1/-1; font-size:14px; color:var(--ink-soft); text-align:center; padding:10px 0;">No linen items yet. Add one below.</div>`;
+    return;
+  }
+  container.innerHTML = curLinenItems.map(it => `
+    <div class="linen-item">
+      <div class="li-head">
+        <span class="li-name" id="liname_${it.id}">${it.name}</span>
+        ${!curBmLocked ? `<div class="li-actions">
+          <button type="button" class="li-icon-btn" onclick="startEditLinenItem('${it.id}')">✏️</button>
+          <button type="button" class="li-icon-btn" onclick="removeLinenItemInline('${it.id}')">🗑️</button>
+        </div>` : ''}
+      </div>
+      <div class="stepper">
+        <button type="button" ${curBmLocked?'disabled':''} onclick="stepLinenItem('${it.id}',-1)">−</button>
+        <input type="number" min="0" id="linenqty_${it.id}" value="${it.qty||0}" ${curBmLocked?'disabled':''} oninput="syncLinenQty('${it.id}', this.value)">
+        <button type="button" ${curBmLocked?'disabled':''} onclick="stepLinenItem('${it.id}',1)">+</button>
+      </div>
+    </div>`).join('');
+}
+function findLinenItem(id){ return curLinenItems.find(it=>it.id===id); }
+function syncLinenQty(id, val){
+  const it = findLinenItem(id);
+  if(!it) return;
+  let v = parseInt(val||'0',10);
+  if(isNaN(v) || v<0) v=0;
+  it.qty = v;
+}
+function stepLinenItem(id, delta){
+  const it = findLinenItem(id);
+  if(!it) return;
+  it.qty = Math.max(0, (it.qty||0) + delta);
+  renderLinenGrid();
+}
+function addLinenItemInline(){
+  const input = document.getElementById('newLinenItemName');
+  const name = input.value.trim();
+  if(!name){ showToast('Enter an item name first'); return; }
+  curLinenItems.push({ id:'li'+Date.now()+Math.floor(Math.random()*1000), name, qty:0 });
+  input.value = '';
+  renderLinenGrid();
+}
+function startEditLinenItem(id){
+  const it = findLinenItem(id);
+  if(!it) return;
+  const span = document.getElementById('liname_'+id);
+  if(!span) return;
+  span.outerHTML = `<span style="display:flex; gap:6px; align-items:center; flex:1;">
+    <input type="text" id="editname_${id}" value="${it.name.replace(/"/g,'&quot;')}" style="flex:1; padding:6px 8px; font-size:14px; border-radius:7px; border:1.5px solid var(--teal-600);">
+    <button type="button" class="li-icon-btn" onclick="confirmEditLinenItem('${id}')">✓</button>
+  </span>`;
+  document.getElementById('editname_'+id).focus();
+}
+function confirmEditLinenItem(id){
+  const it = findLinenItem(id);
+  const input = document.getElementById('editname_'+id);
+  if(!it || !input) return;
+  const newName = input.value.trim();
+  if(newName) it.name = newName;
+  renderLinenGrid();
+}
+function removeLinenItemInline(id){
+  curLinenItems = curLinenItems.filter(it=>it.id!==id);
+  renderLinenGrid();
+  showToast('Item removed');
+}
+function setHK(s){ curHK = s; reflectSeg('HK', s); }
+function setBM(s){ curBM = s; reflectSeg('BM', s); }
+function setOcc(s){ curOcc = s; reflectOccPri(); }
+function setPri(s){ curPri = s; reflectOccPri(); }
+function setFlag(s){ curFlag = s; buildFlagGrid(); }
+function reflectSeg(prefix, current){
+  ['pending','progress','done','na'].forEach(s=>{
+    const btn = document.getElementById('seg'+prefix+'_'+s);
+    if(!btn) return;
+    btn.classList.toggle('active-pending', s==='pending' && current===s);
+    btn.classList.toggle('active-progress', s==='progress' && current===s);
+    btn.classList.toggle('active-done', s==='done' && current===s);
+    btn.classList.toggle('active-na', s==='na' && current===s);
+  });
+}
+function reflectOccPri(){
+  ['occupied','vacant'].forEach(s=>{
+    const btn = document.getElementById('segOcc_'+s);
+    if(btn) btn.classList.toggle('active-sel', curOcc===s);
+  });
+  ['normal','vip','vvip'].forEach(s=>{
+    const btn = document.getElementById('segPri_'+s);
+    if(btn) btn.classList.toggle('active-sel', curPri===s);
+  });
+}
+function buildFlagGrid(){
+  const grid = document.getElementById('flagGrid');
+  if(!grid) return;
+  grid.innerHTML = Object.keys(FLAG_META).map(k=>{
+    const m = FLAG_META[k];
+    const sel = curFlag===k;
+    const bg = sel ? m.color+'22' : '#fff';
+    const border = sel ? m.color : 'var(--line)';
+    return `<button type="button" class="flagbtn${sel?' selected':''}" style="background:${bg}; border-color:${border};" onclick="setFlag('${k}')">
+      <span class="dot" style="background:${m.color};"></span>
+      <span class="lb-en">${m.label}</span>
+      <span class="lb-np">${m.np}</span>
+    </button>`;
+  }).join('');
+}
+function saveRoom(){
+  const r = DATA.rooms[NAV.activeRoomKey];
+  if(canEditHK()){
+    r.hkStatus = curHK;
+    r.hkBy = document.getElementById('roomHkBy').value.trim();
+  }
+  if(canEditBM()){
+    r.bmStatus = curBM;
+    r.bmBy = document.getElementById('roomBmBy').value.trim();
+    r.linenItems = curLinenItems;
+  }
+  r.occupancy = curOcc;
+  r.priority = curPri;
+  r.flag = curFlag;
+  r.notes = document.getElementById('roomNotes').value.trim();
+  r.updatedAt = new Date().toISOString();
+  saveData();
+  closeModal();
+  refreshViews();
+}
+function deleteRoom(){
+  const r = DATA.rooms[NAV.activeRoomKey];
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="openRoom('${NAV.activeRoomKey}')">←</button>
+        <h3>Remove Room?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">This will remove Room ${r.num} from tracking. This can't be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="openRoom('${NAV.activeRoomKey}')">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteRoom()">Remove Room</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteRoom(){
+  delete DATA.rooms[NAV.activeRoomKey];
+  saveData();
+  closeModal();
+  refreshViews();
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+function refreshViews(){
+  renderDashboard();
+  if(!document.getElementById('screen-lowlinen').classList.contains('hidden')) renderLowLinen();
+  if(!document.getElementById('screen-vip').classList.contains('hidden')) renderVipList();
+  if(!document.getElementById('screen-flags').classList.contains('hidden')) renderFlagsList();
+  if(!document.getElementById('screen-vacant').classList.contains('hidden')) renderVacantList();
+  if(!document.getElementById('screen-rooms').classList.contains('hidden') && NAV.building && NAV.floor) renderRooms();
+  if(!document.getElementById('screen-floors').classList.contains('hidden') && NAV.building) renderFloors();
+  if(!document.getElementById('screen-zones').classList.contains('hidden') && NAV.building) renderZones();
+}
+
+/* ============================================================
+   ACCOUNT / LOGOUT
+   ============================================================ */
+function openAccountPanel(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Account</h3>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--teal-100); border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="font-family:var(--disp); font-weight:700; font-size:19px; color:var(--teal-900);">${SESSION.name}</div>
+          <div style="font-family:var(--mono); font-size:13.5px; color:var(--teal-600); text-transform:uppercase; letter-spacing:.5px; margin-top:3px;">${SESSION.role} · ${SESSION.scope} · ${SESSION.shift} Shift</div>
+        </div>
+        <button class="btn-danger" style="width:100%; padding:13px;" onclick="confirmLogout()">Log Out</button>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmLogout(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="openAccountPanel()">←</button>
+        <h3>Log Out?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">You'll need to sign back in to continue tracking. Your saved data stays on this device.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="openAccountPanel()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="doLogout()">Log Out</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function doLogout(){
+  SESSION = null;
+  localStorage.removeItem(SESSION_KEY);
+  NAV = { building:null, zone:null, floor:null, activeRoomKey:null };
+  closeModal();
+  selectedLoginName = "";
+  pickCombo('Housekeeping'); pickShift('Day');
+  showScreen('screen-login');
+}
+
+/* ============================================================
+   LOW LINEN
+   ============================================================ */
+function renderLowLinen(){
+  const wrap = document.getElementById('lowLinenList');
+  const rooms = allRooms().filter(isLow);
+  if(rooms.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">✅</span>No low linen alerts. All tracked rooms are stocked.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  rooms.forEach(r=>{
+    const b = BUILDINGS[r.building];
+    const loc = (b.hasZones? b.zones[r.zone].name+' · ':'') + r.floor + ' Floor';
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ openRoom(r.key); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">${b.icon} Room ${r.num}</div>
+        <div class="li-sub">${b.name} · ${loc}</div>
+      </div>
+      <div class="li-badge badge-pending">⚠️ Low</div>`;
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   VIP / VVIP
+   ============================================================ */
+function renderVacantList(){
+  const wrap = document.getElementById('vacantList');
+  const rooms = allRooms().filter(r=>{ norm(r); return r.occupancy==='vacant'; });
+  if(rooms.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">🛌</span>No vacant rooms right now.<br>सबै कोठा ओगटिएको छ।</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  rooms.forEach(r=>{
+    const b = BUILDINGS[r.building];
+    const loc = (b.hasZones? b.zones[r.zone].name+' · ':'') + r.floor + ' Floor';
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ openRoom(r.key); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">🛌 Room ${r.num}</div>
+        <div class="li-sub">${b.icon} ${b.name} · ${loc}</div>
+      </div>
+      <div class="li-badge" style="background:var(--line); color:var(--ink-soft);">VACANT</div>`;
+    wrap.appendChild(btn);
+  });
+}
+function renderVipList(){
+  const wrap = document.getElementById('vipList');
+  const rooms = allRooms().filter(r=>{ norm(r); return r.priority==='vip' || r.priority==='vvip'; });
+  if(rooms.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">⭐</span>No VIP or VVIP rooms flagged right now.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  rooms.forEach(r=>{
+    const b = BUILDINGS[r.building];
+    const loc = (b.hasZones? b.zones[r.zone].name+' · ':'') + r.floor + ' Floor';
+    const isVVIP = r.priority==='vvip';
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ openRoom(r.key); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">${isVVIP?'🌟':'⭐'} Room ${r.num}</div>
+        <div class="li-sub">${b.icon} ${b.name} · ${loc}</div>
+      </div>
+      <div class="li-badge" style="background:${isVVIP?'var(--purple-bg)':'var(--gold-bg)'}; color:${isVVIP?'var(--purple)':'var(--gold)'};">${isVVIP?'VVIP':'VIP'}</div>`;
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   PRIORITY FLAGS
+   ============================================================ */
+function renderFlagsList(){
+  document.getElementById('legendStrip2').innerHTML = legendHtml();
+  const wrap = document.getElementById('flagsList');
+  const rooms = allRooms().filter(r=>{ norm(r); return r.flag && r.flag!=='none'; });
+  if(rooms.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">🚩</span>No rooms flagged. All clear.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  rooms.forEach(r=>{
+    const b = BUILDINGS[r.building];
+    const loc = (b.hasZones? b.zones[r.zone].name+' · ':'') + r.floor + ' Floor';
+    const m = FLAG_META[r.flag];
+    const btn = document.createElement('button');
+    btn.className='list-item';
+    btn.onclick = ()=>{ openRoom(r.key); };
+    btn.innerHTML = `
+      <div class="li-main">
+        <div class="li-title">${b.icon} Room ${r.num}</div>
+        <div class="li-sub">${b.name} · ${loc}</div>
+      </div>
+      <div class="li-badge" style="background:${m.color}22; color:${m.color};">● ${m.label}</div>`;
+    wrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   NOTEPAD
+   ============================================================ */
+function renderNotepad(){
+  const wrap = document.getElementById('notesList');
+  const notes = (DATA.notes||[]).slice().sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if(notes.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">📝</span>No notes yet. Tap "+ Add Note" to leave a shift note or handover message.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  notes.forEach(n=>{
+    const div = document.createElement('div');
+    div.className='note-card';
+    const t = new Date(n.time);
+    const timeStr = t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' · ' + t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = `
+      <div class="n-head">
+        <div class="n-meta">${n.author} · ${timeStr}</div>
+        <button class="note-del" onclick="deleteNote('${n.id}')">✕</button>
+      </div>
+      <div class="n-text"></div>`;
+    div.querySelector('.n-text').textContent = n.text;
+    wrap.appendChild(div);
+  });
+}
+function addNote(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Add Note</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Note</label>
+          <textarea id="newNoteText" rows="5" placeholder="e.g. Zone D linen store restocked, floor 5 lift out of service..."></textarea>
+        </div>
+        <div id="addNoteError" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmAddNote()">Save Note</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('newNoteText').focus();
+}
+function confirmAddNote(){
+  const ta = document.getElementById('newNoteText');
+  const errBox = document.getElementById('addNoteError');
+  const text = ta.value.trim();
+  if(!text){ errBox.textContent='Please write a note first.'; errBox.style.display='block'; return; }
+  DATA.notes = DATA.notes || [];
+  DATA.notes.push({ id: 'n'+Date.now(), text, author: SESSION.name, time: new Date().toISOString() });
+  saveData();
+  closeModal();
+  renderNotepad();
+}
+function deleteNote(id){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Delete Note?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">This note will be removed for everyone using this device.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteNote('${id}')">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteNote(id){
+  DATA.notes = (DATA.notes||[]).filter(n=>n.id!==id);
+  saveData();
+  closeModal();
+  renderNotepad();
+}
+
+/* ============================================================
+   SUPERVISORS
+   ============================================================ */
+function renderSupervisors(){
+  const wrap = document.getElementById('supervisorsList');
+  const list = (DATA.supervisors||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('tileSupD').textContent = (DATA.supervisors||[]).length + ' supervisor' + ((DATA.supervisors||[]).length!==1?'s':'') + ' on roster';
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">🗂️</span>No supervisors added yet.<br>Tap "+ Add Supervisor" to build the roster.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  list.forEach(s=>{
+    const div = document.createElement('div');
+    div.className='note-card';
+    div.innerHTML = `
+      <div class="n-head" style="align-items:center;">
+        <div style="font-family:var(--disp); font-weight:700; font-size:16.5px; color:var(--teal-900);">🗂️ ${s.name}</div>
+        <div style="display:flex; gap:6px;">
+          <button class="li-icon-btn" style="width:26px; height:26px;" onclick="startEditSupervisor('${s.id}')">✏️</button>
+          <button class="note-del" onclick="deleteSupervisor('${s.id}')">🗑️</button>
+        </div>
+      </div>`;
+    wrap.appendChild(div);
+  });
+}
+function addSupervisor(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Add Supervisor</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Supervisor Name</label>
+          <input type="text" id="newSupName" placeholder="e.g. Bikash Thapa" autofocus>
+        </div>
+        <div id="addSupError" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmAddSupervisor()">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById('newSupName');
+  input.focus();
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmAddSupervisor(); });
+}
+function confirmAddSupervisor(){
+  const input = document.getElementById('newSupName');
+  const errBox = document.getElementById('addSupError');
+  const name = input.value.trim();
+  if(!name){ errBox.textContent='Please enter a name.'; errBox.style.display='block'; return; }
+  DATA.supervisors = DATA.supervisors || [];
+  if(DATA.supervisors.some(s=>s.name.toLowerCase()===name.toLowerCase())){
+    errBox.textContent='This supervisor is already on the roster.'; errBox.style.display='block'; return;
+  }
+  DATA.supervisors.push({ id:'sup'+Date.now()+Math.floor(Math.random()*1000), name });
+  saveData();
+  closeModal();
+  renderSupervisors();
+}
+function startEditSupervisor(id){
+  const s = (DATA.supervisors||[]).find(x=>x.id===id);
+  if(!s) return;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Update Supervisor</h3>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Supervisor Name</label>
+          <input type="text" id="editSupName" value="${s.name.replace(/"/g,'&quot;')}" autofocus>
+        </div>
+        <div id="editSupError" style="color:var(--red); font-size:14.5px; margin-bottom:4px; display:none;"></div>
+        <div class="modal-actions" style="margin-top:6px;">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmEditSupervisor('${s.id}')">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById('editSupName');
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmEditSupervisor(s.id); });
+}
+function confirmEditSupervisor(id){
+  const input = document.getElementById('editSupName');
+  const errBox = document.getElementById('editSupError');
+  const name = input.value.trim();
+  if(!name){ errBox.textContent='Please enter a name.'; errBox.style.display='block'; return; }
+  const s = (DATA.supervisors||[]).find(x=>x.id===id);
+  if(!s) return;
+  s.name = name;
+  saveData();
+  closeModal();
+  renderSupervisors();
+}
+function deleteSupervisor(id){
+  const s = (DATA.supervisors||[]).find(x=>x.id===id);
+  if(!s) return;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Remove Supervisor?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">Remove ${s.name} from the supervisor roster? This can't be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteSupervisor('${s.id}')">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteSupervisor(id){
+  DATA.supervisors = (DATA.supervisors||[]).filter(s=>s.id!==id);
+  saveData();
+  closeModal();
+  renderSupervisors();
+}
+
+/* ============================================================
+   MESSAGING (Supervisor -> individual Staff, personal messages)
+   ============================================================ */
+let msgSelectedName = "";
+function renderMessageCompose(){
+  msgSelectedName = "";
+  document.getElementById('msgToDisplay').value = '';
+  document.getElementById('msgComposeText').value = '';
+  document.getElementById('msgComposeErr').style.display = 'none';
+  pendingVoiceNote = null;
+  privateRecordActive = false;
+  const vBtn = document.getElementById('voiceRecordBtn');
+  if(vBtn){ vBtn.classList.remove('recording'); vBtn.textContent = '🎙️'; }
+  renderVoiceNotePreview();
+  const staff = (DATA.staff||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const wrap = document.getElementById('msgStaffList');
+  if(staff.length===0){
+    wrap.innerHTML = `<div class="name-empty">No staff on the roster yet.</div>`;
+  } else {
+    wrap.innerHTML = staff.map(p => `<button type="button" class="name-chip" id="msgchip_${p.id}" onclick="selectMessageRecipient('${p.name.replace(/'/g,"\\'")}','${p.id}')">${p.name}</button>`).join('');
+  }
+  renderSentMessages();
+}
+function selectMessageRecipient(name, id){
+  msgSelectedName = name;
+  document.getElementById('msgToDisplay').value = name;
+  document.querySelectorAll('#msgStaffList .name-chip').forEach(b=>b.classList.remove('active'));
+  document.getElementById('msgchip_'+id).classList.add('active');
+  document.getElementById('msgComposeErr').style.display = 'none';
+}
+function sendStaffMessage(){
+  const errBox = document.getElementById('msgComposeErr');
+  const text = document.getElementById('msgComposeText').value.trim();
+  if(!msgSelectedName){ errBox.textContent='Please select a staff member first.'; errBox.style.display='block'; return; }
+  if(!text && !pendingVoiceNote){ errBox.textContent='Please write a message or record a voice note.'; errBox.style.display='block'; return; }
+  DATA.messages = DATA.messages || [];
+  const newMsg = {
+    id:'msg'+Date.now()+Math.floor(Math.random()*1000),
+    toName: msgSelectedName,
+    fromName: SESSION.name,
+    fromRole: SESSION.role,
+    text,
+    audio: pendingVoiceNote ? pendingVoiceNote.audio : null,
+    duration: pendingVoiceNote ? pendingVoiceNote.duration : null,
+    time: new Date().toISOString(),
+    read:false
+  };
+  DATA.messages.push(newMsg);
+  if(!saveData()){
+    DATA.messages = DATA.messages.filter(m=>m.id!==newMsg.id); // roll back, keep the draft so nothing is lost
+    return;
+  }
+  showToast('Message sent to ' + msgSelectedName);
+  document.getElementById('msgComposeText').value = '';
+  document.getElementById('msgToDisplay').value = '';
+  msgSelectedName = "";
+  pendingVoiceNote = null;
+  renderVoiceNotePreview();
+  document.querySelectorAll('.name-picker .name-chip').forEach(b=>b.classList.remove('active'));
+  renderSentMessages();
+}
+function renderSentMessages(){
+  const wrap = document.getElementById('sentMessagesList');
+  const sent = (DATA.messages||[]).filter(m=>m.fromName===SESSION.name).slice().sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,10);
+  if(sent.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">💬</span>No messages sent yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  sent.forEach(m=>{
+    const div = document.createElement('div');
+    div.className='note-card';
+    const t = new Date(m.time);
+    const timeStr = t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' · ' + t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = `
+      <div class="n-head">
+        <div class="n-meta">To ${m.toName} · ${timeStr} ${m.read?'· ✓✓ Read':'· ✓ Sent'}</div>
+        <button class="note-del" onclick="deleteStaffMessage('${m.id}')">✕</button>
+      </div>
+      <div class="n-text"></div>
+      ${m.audio ? `<audio controls src="${audioSrcFor(m.id, m.audio)}" style="width:100%; margin-top:8px; height:36px;"></audio>` : ''}`;
+    div.querySelector('.n-text').textContent = m.text || '';
+    wrap.appendChild(div);
+  });
+}
+function renderInbox(){
+  const wrap = document.getElementById('inboxList');
+  const mine = (DATA.messages||[]).filter(m=>m.toName===SESSION.name).slice().sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if(mine.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic">💬</span>No messages yet.<br>तपाईंलाई अहिलेसम्म कुनै सन्देश छैन।</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  mine.forEach(m=>{
+    if(!m.read){ m.read = true; }
+    const div = document.createElement('div');
+    div.className='note-card';
+    const t = new Date(m.time);
+    const timeStr = t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' · ' + t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = `
+      <div class="n-head">
+        <div class="n-meta">From ${m.fromName} (${m.fromRole}) · ${timeStr}</div>
+        <button class="note-del" onclick="deleteStaffMessage('${m.id}')">✕</button>
+      </div>
+      <div class="n-text"></div>
+      ${m.audio ? `<audio controls src="${audioSrcFor(m.id, m.audio)}" style="width:100%; margin-top:8px; height:36px;"></audio>` : ''}`;
+    div.querySelector('.n-text').textContent = m.text || '';
+    wrap.appendChild(div);
+  });
+  saveData();
+  renderDashboard();
+}
+function deleteStaffMessage(id){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Delete Message?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">This message will be removed. This can't be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteStaffMessage('${id}')">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteStaffMessage(id){
+  invalidateAudioCache(id);
+  DATA.messages = (DATA.messages||[]).filter(m=>m.id!==id);
+  saveData();
+  closeModal();
+  if(!document.getElementById('screen-inbox').classList.contains('hidden')) renderInbox();
+  if(!document.getElementById('screen-message-compose').classList.contains('hidden')) renderSentMessages();
+  renderDashboard();
+}
+
+/* ============================================================
+   VOICE RECORDING ENGINE (shared by Group Talk + private voice notes)
+   Needs the page served over HTTPS (mic access requires a secure
+   context) — works once hosted, not when opened as a bare local file.
+   ============================================================ */
+let __mediaRecorder = null;
+let __audioChunks = [];
+let __recordStartTime = 0;
+let __activeStream = null;
+let __recordMimeType = '';
+
+/* ---------------- Playback helper ----------------
+   iOS Safari is unreliable playing <audio> from raw base64 data: URIs,
+   especially longer ones. Converting to a Blob object URL at render
+   time is far more reliable across iPhone/Android/desktop browsers. */
+const __objectUrlCache = new Map();
+function dataUrlToBlob(dataUrl){
+  const parts = dataUrl.split(',');
+  const meta = parts[0];
+  const base64 = parts[1];
+  const mimeMatch = meta.match(/data:(.*?);base64/);
+  const mime = mimeMatch ? mimeMatch[1] : 'audio/mp4';
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0;i<len;i++){ bytes[i] = binary.charCodeAt(i); }
+  return new Blob([bytes], { type: mime });
+}
+function audioSrcFor(id, dataUrl){
+  if(!dataUrl) return '';
+  if(__objectUrlCache.has(id)) return __objectUrlCache.get(id);
+  try{
+    const url = URL.createObjectURL(dataUrlToBlob(dataUrl));
+    __objectUrlCache.set(id, url);
+    return url;
+  }catch(e){
+    return dataUrl; // fallback to raw data URL if Blob conversion fails
+  }
+}
+function invalidateAudioCache(id){
+  if(__objectUrlCache.has(id)){
+    try{ URL.revokeObjectURL(__objectUrlCache.get(id)); }catch(e){}
+    __objectUrlCache.delete(id);
+  }
+}
+
+/* ============================================================
+   VOICE RETENTION — auto-delete audio older than 7 days
+   Group Talk messages are voice-only, so the whole entry is removed.
+   Private messages keep any text; only the attached audio expires.
+   ============================================================ */
+const AUDIO_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+function purgeOldVoiceMessages(){
+  const now = Date.now();
+  let changed = false;
+
+  if(DATA.groupMessages && DATA.groupMessages.length){
+    const before = DATA.groupMessages.length;
+    const kept = [];
+    DATA.groupMessages.forEach(m=>{
+      if(now - new Date(m.time).getTime() >= AUDIO_RETENTION_MS){
+        invalidateAudioCache(m.id);
+      } else {
+        kept.push(m);
+      }
+    });
+    DATA.groupMessages = kept;
+    if(DATA.groupMessages.length !== before) changed = true;
+  }
+
+  if(DATA.messages && DATA.messages.length){
+    const before = DATA.messages.length;
+    const kept = [];
+    DATA.messages.forEach(m=>{
+      if(m.audio && (now - new Date(m.time).getTime()) >= AUDIO_RETENTION_MS){
+        invalidateAudioCache(m.id);
+        m.audio = null;
+        m.duration = null;
+        changed = true;
+      }
+      if(m.audio || (m.text && m.text.trim())){
+        kept.push(m);
+      } else {
+        changed = true; // nothing left after audio expired and no text — drop it
+      }
+    });
+    DATA.messages = kept;
+    if(DATA.messages.length !== before) changed = true;
+  }
+
+  if(changed) saveData();
+}
+
+function pickSupportedMimeType(){
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg;codecs=opus',
+    'audio/mpeg'
+  ];
+  if(!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+  for(const c of candidates){
+    try{ if(MediaRecorder.isTypeSupported(c)) return c; }catch(e){ /* ignore */ }
+  }
+  return '';
+}
+async function beginRecording(){
+  if(!window.isSecureContext){
+    showToast('Mic needs HTTPS — open via your hosted link, not a local file');
+    return false;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showToast('This browser has no microphone support (getUserMedia missing)');
+    return false;
+  }
+  if(!window.MediaRecorder){
+    showToast('This browser has no MediaRecorder support');
+    return false;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    __activeStream = stream;
+    __audioChunks = [];
+    __recordMimeType = pickSupportedMimeType();
+    __mediaRecorder = __recordMimeType ? new MediaRecorder(stream, { mimeType: __recordMimeType }) : new MediaRecorder(stream);
+    __mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) __audioChunks.push(e.data); };
+    __mediaRecorder.start();
+    __recordStartTime = Date.now();
+    return true;
+  }catch(err){
+    if(err && err.name==='NotAllowedError') showToast('Microphone permission denied — check browser/site settings');
+    else if(err && err.name==='NotFoundError') showToast('No microphone found on this device');
+    else if(err && err.name==='NotReadableError') showToast('Microphone is busy or unavailable right now');
+    else showToast('Microphone error: ' + (err && err.name ? err.name : 'unknown'));
+    return false;
+  }
+}
+function finishRecording(onDone){
+  if(!__mediaRecorder || __mediaRecorder.state==='inactive'){ return; }
+  __mediaRecorder.onstop = ()=>{
+    const outType = __recordMimeType ? __recordMimeType.split(';')[0] : (__audioChunks[0] ? __audioChunks[0].type : 'audio/webm');
+    const blob = new Blob(__audioChunks, { type: outType || 'audio/webm' });
+    const duration = Math.max(1, Math.round((Date.now()-__recordStartTime)/1000));
+    if(blob.size===0){
+      showToast('Recording was empty — hold the button longer while speaking');
+      if(__activeStream) __activeStream.getTracks().forEach(t=>t.stop());
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = ()=>{ onDone(reader.result, duration); };
+    reader.readAsDataURL(blob);
+    if(__activeStream) __activeStream.getTracks().forEach(t=>t.stop());
+  };
+  __mediaRecorder.stop();
+}
+
+/* ---------------- Group Talk (push-to-talk) ---------------- */
+async function showMicDiagnostic(){
+  const el = document.getElementById('pttDiagnostic');
+  if(!el) return;
+  if(!window.isSecureContext){
+    el.innerHTML = '⚠️ Not opened over HTTPS — mic will not work here.<br>Open your hosted link (e.g. GitHub Pages URL) directly in Safari/Chrome — not inside an in-app preview.';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    el.innerHTML = '⚠️ This browser/app does not expose microphone access.<br>Open this page in Safari or Chrome directly, not inside an in-app file preview.';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  if(!window.MediaRecorder){
+    el.textContent = '⚠️ This browser does not support audio recording (MediaRecorder).';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  // Check actual permission state where supported (not all browsers support this query)
+  if(navigator.permissions && navigator.permissions.query){
+    try{
+      const status = await navigator.permissions.query({ name:'microphone' });
+      if(status.state === 'denied'){
+        el.innerHTML = '🚫 Microphone is blocked for this site.<br>Tap the 🔒/ⓘ icon next to the address bar → Site Settings → allow Microphone → reload the page.<br>If you\'re inside an in-app preview (not a real browser tab), open the hosted link in Safari/Chrome instead.';
+        el.style.color = 'var(--red)';
+        return;
+      }
+      if(status.state === 'granted'){
+        el.textContent = '🎙️ Microphone ready.';
+        el.style.color = 'var(--ink-soft)';
+        return;
+      }
+      // 'prompt' state
+      el.innerHTML = '🎙️ Tap "Request Microphone Access" below, then allow when your browser asks.';
+      el.style.color = 'var(--ink-soft)';
+      document.getElementById('pttRequestBtn').style.display = 'inline-block';
+      return;
+    }catch(e){
+      // Permissions API doesn't support 'microphone' name in this browser (e.g. some Safari versions) — fall through
+    }
+  }
+  el.innerHTML = '🎙️ Tap "Request Microphone Access" below to check.';
+  document.getElementById('pttRequestBtn').style.display = 'inline-block';
+}
+async function requestMicAccess(){
+  const el = document.getElementById('pttDiagnostic');
+  const ok = await beginRecording();
+  if(ok){
+    // immediately stop — this call was only to trigger/verify the permission prompt
+    finishRecording(()=>{});
+    el.textContent = '🎙️ Microphone ready — you can hold the button now.';
+    el.style.color = 'var(--ink-soft)';
+    document.getElementById('pttRequestBtn').style.display = 'none';
+  }
+}
+
+let pttActive = false;
+async function pttStart(e){
+  if(e && e.cancelable) e.preventDefault();
+  if(pttActive) return;
+  const ok = await beginRecording();
+  if(!ok) return;
+  pttActive = true;
+  document.getElementById('pttButton').classList.add('recording');
+  document.getElementById('pttLabel').innerHTML = 'RECORDING…<span class="np-sub">रेकर्ड हुँदैछ</span>';
+}
+function pttEnd(e){
+  if(e && e.cancelable) e.preventDefault();
+  if(!pttActive) return;
+  pttActive = false;
+  document.getElementById('pttButton').classList.remove('recording');
+  document.getElementById('pttLabel').innerHTML = 'HOLD TO TALK<span class="np-sub">थिच्नुहोस् र बोल्नुहोस्</span>';
+  finishRecording((dataUrl, duration)=>{
+    DATA.groupMessages = DATA.groupMessages || [];
+    const newMsg = { id:'gm'+Date.now()+Math.floor(Math.random()*1000), fromName:SESSION.name, fromRole:SESSION.role, audio:dataUrl, duration, time:new Date().toISOString() };
+    DATA.groupMessages.push(newMsg);
+    if(!saveData()){
+      DATA.groupMessages = DATA.groupMessages.filter(m=>m.id!==newMsg.id);
+      return;
+    }
+    renderGroupFeed();
+  });
+}
+function pttCancelIfActive(){
+  if(pttActive) pttEnd();
+}
+function renderGroupFeed(){
+  const wrap = document.getElementById('groupFeedList');
+  if(!wrap) return;
+  const msgs = (DATA.groupMessages||[]).slice().sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if(msgs.length===0){
+    wrap.innerHTML = `<div class="empty-note"><span class="ic wt-icon" style="display:block; margin:0 auto 8px;">${WALKIE_SVG_LARGE}</span>No voice messages yet. Hold the button above to send one.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  msgs.forEach(m=>{
+    const div = document.createElement('div');
+    div.className='note-card';
+    const t = new Date(m.time);
+    const timeStr = t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' · ' + t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = `
+      <div class="n-head">
+        <div class="n-meta">🎙️ ${m.fromName} (${m.fromRole}) · ${timeStr} · ${m.duration}s</div>
+        <button class="note-del" onclick="deleteGroupMessage('${m.id}')">✕</button>
+      </div>
+      <audio controls src="${audioSrcFor(m.id, m.audio)}" style="width:100%; margin-top:8px; height:36px;"></audio>`;
+    wrap.appendChild(div);
+  });
+}
+function deleteGroupMessage(id){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <button class="modal-close" onclick="closeModal()">←</button>
+        <h3>Delete Voice Message?</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.5; margin-top:0;">This voice message will be removed for everyone. This can't be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-danger" style="flex:2;" onclick="confirmDeleteGroupMessage('${id}')">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function confirmDeleteGroupMessage(id){
+  invalidateAudioCache(id);
+  DATA.groupMessages = (DATA.groupMessages||[]).filter(m=>m.id!==id);
+  saveData();
+  closeModal();
+  renderGroupFeed();
+}
+
+/* ---------------- Private voice notes (Message Staff + Inbox) ---------------- */
+let pendingVoiceNote = null; // { audio, duration }
+let privateRecordActive = false;
+async function toggleVoiceNoteRecord(){
+  const btn = document.getElementById('voiceRecordBtn');
+  if(!privateRecordActive){
+    const ok = await beginRecording();
+    if(!ok) return;
+    privateRecordActive = true;
+    btn.classList.add('recording');
+    btn.textContent = '⏹️';
+  } else {
+    privateRecordActive = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎙️';
+    finishRecording((dataUrl, duration)=>{
+      invalidateAudioCache('preview');
+      pendingVoiceNote = { audio:dataUrl, duration };
+      renderVoiceNotePreview();
+    });
+  }
+}
+function cancelPrivateRecording(){
+  privateRecordActive = false;
+  const btn = document.getElementById('voiceRecordBtn');
+  if(btn){ btn.classList.remove('recording'); btn.textContent = '🎙️'; }
+  finishRecording(()=>{}); // stop the mic stream; discard whatever was captured
+}
+function renderVoiceNotePreview(){
+  const wrap = document.getElementById('voiceNotePreviewWrap');
+  if(!pendingVoiceNote){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = `
+    <div class="voice-note-preview">
+      <audio controls src="${audioSrcFor('preview', pendingVoiceNote.audio)}"></audio>
+      <button type="button" class="note-del" onclick="clearVoiceNote()">✕</button>
+    </div>`;
+}
+function clearVoiceNote(){
+  pendingVoiceNote = null;
+  invalidateAudioCache('preview');
+  renderVoiceNotePreview();
+}
+
+/* ============================================================
+   REPORTS
+   ============================================================ */
+function fmtDate(){
+  const d = new Date();
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function icon(s){ return {pending:'🟡',progress:'🔵',done:'🟢',na:'⚪'}[s]; }
+function label(s){ return {pending:'Pending',progress:'In Progress',done:'Done',na:'N/A'}[s]; }
+
+function buildRoomLines(rooms, scope){
+  scope = scope || 'Both';
+  return rooms.map(r=>{
+    norm(r);
+    const low = isLow(r)?' ⚠️LOW':'';
+    const tags = [];
+    if(r.priority==='vip') tags.push('⭐VIP');
+    if(r.priority==='vvip') tags.push('🌟VVIP');
+    if(r.occupancy==='vacant') tags.push('VACANT');
+    if(r.flag && r.flag!=='none') tags.push('🚩'+FLAG_META[r.flag].label);
+    const tagStr = tags.length ? ' ['+tags.join(', ')+']' : '';
+    let out = `  Rm ${r.num}${tagStr}`;
+    if(scope!=='Bed Making'){
+      out += `\n    🧹 HK: ${icon(r.hkStatus)} ${label(r.hkStatus)}${r.hkBy? ' ('+r.hkBy+')':''}`;
+    }
+    if(scope!=='Housekeeping'){
+      const items = r.linenItems||[];
+      const linenStr = items.length ? items.map(it=>it.name+':'+(it.qty||0)).join(' ') : 'none';
+      out += `\n    🛏️ BM: ${icon(r.bmStatus)} ${label(r.bmStatus)}${r.bmBy? ' ('+r.bmBy+')':''} | ${linenStr}${low}`;
+    }
+    return out;
+  }).join('\n');
+}
+
+function openLevelReport(){
+  const b = BUILDINGS[NAV.building];
+  const scope = SESSION.scope; // 'Housekeeping' | 'Bed Making' | 'Both'
+  let rooms, title;
+  if(NAV.floor){
+    rooms = getRoomsFor(NAV.building, NAV.zone, NAV.floor);
+    title = b.name + (b.hasZones? ' — '+b.zones[NAV.zone].name:'') + ' — ' + NAV.floor + ' Floor';
+  } else if(NAV.zone){
+    rooms = Object.keys(DATA.rooms).filter(k=>k.startsWith(NAV.building+'::'+NAV.zone+'::')).map(k=>DATA.rooms[k]);
+    title = b.name + ' — ' + b.zones[NAV.zone].name;
+  } else {
+    rooms = allRoomsInBuilding(NAV.building);
+    title = b.name;
+  }
+  const hkDone = rooms.filter(r=>r.hkStatus==='done').length;
+  const bmDone = rooms.filter(r=>r.bmStatus==='done').length;
+  const low = rooms.filter(isLow).length;
+  let statsLine = `Rooms: ${rooms.length}`;
+  if(scope!=='Bed Making') statsLine += ` | HK Done: ${hkDone}`;
+  if(scope!=='Housekeeping') statsLine += ` | BM Done: ${bmDone} | Low linen: ${low}`;
+  const heading = scope==='Housekeeping' ? 'HOUSEKEEPING REPORT' : scope==='Bed Making' ? 'BED MAKING REPORT' : 'HOUSEKEEPING & BED MAKING REPORT';
+  const txt = `*BMC ${heading}*\n${title}\nBy: ${SESSION.name} (${SESSION.role} · ${SESSION.shift} Shift)\n${fmtDate()}\n————————————————\n${statsLine}\n————————————————\n${rooms.length? buildRoomLines(rooms, scope) : '  No rooms tracked in this area.'}`;
+  showReport(txt, title);
+}
+
+function openFullReport(){
+  const s = computeStats();
+  const scope = SESSION.scope;
+  let body = '';
+  Object.keys(BUILDINGS).forEach(code=>{
+    const b = BUILDINGS[code];
+    const rooms = allRoomsInBuilding(code);
+    if(rooms.length===0) return;
+    const hkDone = rooms.filter(r=>r.hkStatus==='done').length;
+    const bmDone = rooms.filter(r=>r.bmStatus==='done').length;
+    let bHead = `\n*${b.icon} ${b.name}* (`;
+    const parts = [];
+    if(scope!=='Bed Making') parts.push(`HK ${hkDone}/${rooms.length}`);
+    if(scope!=='Housekeeping') parts.push(`BM ${bmDone}/${rooms.length}`);
+    bHead += parts.join(' · ') + ')\n';
+    body += bHead;
+    if(b.hasZones){
+      Object.keys(b.zones).forEach(zc=>{
+        const zRooms = rooms.filter(r=>r.zone===zc);
+        if(zRooms.length===0) return;
+        body += ` ${b.zones[zc].name}:\n` + buildRoomLines(zRooms, scope) + '\n';
+      });
+    } else {
+      body += buildRoomLines(rooms, scope) + '\n';
+    }
+  });
+  if(!body) body = '\nNo rooms tracked yet across any building.';
+  let statsLine = `Total rooms: ${s.total}`;
+  if(scope!=='Bed Making') statsLine += ` | HK Done: ${s.hkDone} | HK Pending: ${s.hkPending}`;
+  if(scope!=='Housekeeping') statsLine += ` | BM Done: ${s.bmDone} | Low linen: ${s.lowLinen}`;
+  statsLine += ` | VIP/VVIP: ${s.vipCount} | Flagged: ${s.flagCount}`;
+  const heading = scope==='Housekeeping' ? 'HOUSEKEEPING SHIFT REPORT' : scope==='Bed Making' ? 'BED MAKING SHIFT REPORT' : 'FULL SHIFT REPORT';
+  const subHeading = scope==='Housekeeping' ? 'Housekeeping' : scope==='Bed Making' ? 'Bed Making' : 'Housekeeping & Bed Making';
+  const txt = `*BMC ${heading}*\n${subHeading}\nBy: ${SESSION.name} (${SESSION.role} · ${SESSION.shift} Shift)\n${fmtDate()}\n————————————————\n${statsLine}\n————————————————${body}`;
+  showReport(txt, 'All Buildings');
+}
+
+let lastReportText = '';
+function showReport(txt, subtitle){
+  lastReportText = txt;
+  document.getElementById('reportSub').textContent = subtitle;
+  document.getElementById('reportText').textContent = txt;
+  showScreen('screen-report');
+}
+function sendWhatsApp(){
+  const url = 'https://wa.me/?text=' + encodeURIComponent(lastReportText);
+  window.open(url, '_blank');
+}
+function copyReport(){
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(lastReportText).then(()=>showToast('Report copied')).catch(fallbackCopy);
+  } else {
+    fallbackCopy();
+  }
+}
+function fallbackCopy(){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = lastReportText;
+    ta.style.position = 'fixed'; ta.style.top = '-9999px'; ta.style.left = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(ok ? 'Report copied' : 'Copy not supported — tap and hold text to copy');
+  }catch(e){
+    showToast('Copy not supported — tap and hold text to copy');
+  }
+}
+function showToast(msg){
+  const t = document.createElement('div');
+  t.className='toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 1800);
+}
+
+/* ============================================================
+   AUTO BILINGUAL BUTTONS (English + Nepali)
+   Catches plain-text buttons app-wide (modals, confirms, etc.)
+   so every button stays bilingual without manual edits everywhere.
+   ============================================================ */
+const NP_BTN_DICT = {
+  '+ Add': 'थप्नुहोस्',
+  '+ Add Note': 'नोट थप्नुहोस्',
+  '+ Add Room': 'कोठा थप्नुहोस्',
+  '+ Add Supervisor': 'सुपरवाइजर थप्नुहोस्',
+  'Add': 'थप्नुहोस्',
+  'Add Room': 'कोठा थप्नुहोस्',
+  'Cancel': 'रद्द गर्नुहोस्',
+  'Copy Text': 'टेक्स्ट कपी गर्नुहोस्',
+  'Delete': 'मेटाउनुहोस्',
+  'Log Out': 'लगआउट गर्नुहोस्',
+  'Remove': 'हटाउनुहोस्',
+  'Remove Room': 'कोठा हटाउनुहोस्',
+  'Save': 'सेभ गर्नुहोस्',
+  'Save Note': 'नोट सेभ गर्नुहोस्',
+  'Update': 'परिवर्तन गर्नुहोस्',
+  '📋 Report for this area': 'यो क्षेत्रको रिपोर्ट',
+  '📋 Report for this floor': 'यो तलाको रिपोर्ट',
+  '📲 Send via WhatsApp': 'व्हाट्सएपमा पठाउनुहोस्'
+};
+function nepaliizeButtons(root){
+  const scope = root || document;
+  scope.querySelectorAll('button').forEach(btn=>{
+    if(btn.querySelector('.np-sub')) return;
+    const raw = btn.textContent.trim();
+    const np = NP_BTN_DICT[raw];
+    if(np){
+      const span = document.createElement('span');
+      span.className = 'np-sub';
+      span.textContent = np;
+      btn.appendChild(span);
+    }
+  });
+}
+function setupBilingualObservers(){
+  const modalRoot = document.getElementById('modalRoot');
+  const app = document.getElementById('app');
+  if(modalRoot){
+    new MutationObserver(()=> nepaliizeButtons(modalRoot)).observe(modalRoot, {childList:true, subtree:true});
+  }
+  if(app){
+    new MutationObserver(()=> nepaliizeButtons(app)).observe(app, {childList:true, subtree:true});
+  }
+  nepaliizeButtons();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    if(pttActive) pttCancelIfActive();
+    if(privateRecordActive) cancelPrivateRecording();
+  }
+});
+
+(function init(){
+  setupBilingualObservers();
+  purgeOldVoiceMessages();
+  if(SESSION && SESSION.name){ enterApp(); }
+  else { renderNamePicker(); showScreen('screen-login'); }
+})();
+</script>
+</body>
+</html>
